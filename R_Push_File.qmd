@@ -1,0 +1,12 @@
+---
+title: "R Push File"
+author: "Dana Gonzalez"
+format: html
+editor: visual
+---
+```{r}
+library(tidyverse)
+
+library(datasauRus)
+```
+
