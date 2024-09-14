@@ -3,8 +3,13 @@ title: "Lab 3 Assignment"
 author: Dana Gonzalez
 format: html
 editor: visual
+embed-resources: true
+code-fold: true
+theme: cerulean
 ---
+
 ## 1. Read in the data
+
 ```{r}
 download.file(
   "https://raw.githubusercontent.com/USCbiostats/data-science-data/master/02_met/met_all.gz",
@@ -24,9 +29,11 @@ There are 30 columns and 6 rows in this dataset (the dataset was cleaned up duri
 ```{r}
 dim(met)
 ```
+
 ```{r}
 head (met)
 ```
+
 ```{r}
 tail(met)
 ```
@@ -48,18 +55,23 @@ The highest elevation of any weather station in this dataset is 4,113 meters abo
 ```{r}
 table(met$year)
 ```
+
 ```{r}
 table(met$day)
 ```
+
 ```{r}
 table(met$hour)
 ```
+
 ```{r}
 summary(met$temp)
 ```
+
 ```{r}
 summary(met$elev)
 ```
+
 ```{r}
 met$wind.sp[met$winds.sp == 9999.0] <- NA
 summary(met$wind.sp)
@@ -69,6 +81,7 @@ summary(met$wind.sp)
 met[met$elev==9999.0, ] <- NA
 summary(met$elev)
 ```
+
 ```{r}
 met <- met[met$temp > -40, ]
 head(met[order(met$temp), ])
@@ -79,7 +92,6 @@ met$elev[met$elev == 9999.0] <- NA
 summary(met$elev)
 ```
 
-
 ## 5. Check the data against an external source
 
 The range of elevations are valid (according to my Google search). The lowest elevation in the continental US in Death Valley, CA (-86m), whereas the highest elevation in the continental US is found in Mount Whitney, CA (4,418m). This clearly encompasses this dataset's range of -13m to 4,113m.
@@ -87,33 +99,42 @@ The range of elevations are valid (according to my Google search). The lowest el
 The coordinates for the -17.2 degrees celsius data leads to a location outside of Colorado Springs, Colorado. Knowing that this data was pulled in August, this temperature does not make sense in this context.
 
 ## 6. Calculate summary statistics
+
 ```{r}
 elev <- met[which(met$elev == max(met$elev, na.rm = TRUE)), ]
 summary(elev)
 ```
+
 ```{r}
 cor(elev$temp, elev$wind.sp, use="complete")
 ```
+
 ```{r}
 cor(elev$temp, elev$hour, use="complete")
 ```
+
 ```{r}
 cor(elev$wind.sp, elev$day, use="complete")
 ```
+
 ```{r}
 cor(elev$wind.sp, elev$hour, use="complete")
 ```
+
 ```{r}
 cor(elev$temp, elev$day, use="complete")
 ```
 
 ## 7. Exploratory graphs
+
 ```{r}
 hist(met$elev,)
 ```
+
 ```{r}
 hist(met$temp,)
 ```
+
 ```{r}
 hist(met$wind.sp,)
 ```
@@ -130,17 +151,22 @@ library(lubridate)
 elev$date <- with(elev, ymd_h(paste(year, month, day, hour, sep= ' ')))
 summary(elev$date)
 ```
+
 ```{r}
 elev <- elev[order(elev$date), ]
 head(elev)
 ```
+
 ```{r}
 plot(elev$date, elev$temp, type = "l", cex = 0.5)
 ```
+
 ```{r}
 plot(elev$date, elev$wind.sp, type = "l", cex = 0.5)
 ```
-Our temperature and date line graph seems to have two peaks, one around August 6th and another around August 20th. Two peaks were also seen in our wind speed line plot, however both peaks were seen later in the month, the first being around August 18th and the second around August 26th.  Too, wind speeds seemed to be lower in the first third of the August.
 
-## Ask questions
+Our temperature and date line graph seems to have two peaks, one around August 6th and another around August 20th. Two peaks were also seen in our wind speed line plot, however both peaks were seen later in the month, the first being around August 18th and the second around August 26th. Too, wind speeds seemed to be lower in the first third of the August.
+
+## 8. Ask questions
+
 Given that we spent some time in class cleaning up this data, I'm wondering what led to the missing data in this dataset. Was it an issue with collection at the sites, gathering and distributing the data, or another issue?
