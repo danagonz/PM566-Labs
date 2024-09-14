@@ -1,5 +1,5 @@
-# PM566-first-project
+# PM566-Labs
 
-Welcome to PM566, my first repo!
+Welcome to PM566-Labs!
 
-I am going to work on my lab and assignments here.
+I will submit my homework and assignments here.
