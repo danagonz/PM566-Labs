@@ -1,0 +1,180 @@
+---
+title: "PM 566 Assignment 1"
+author: "Dana Gonzalez"
+format: html
+editor: visual
+embed-resources: true
+code-fold: true
+theme: lux
+---
+
+## Assignment Details
+
+In this assignment, I will be using Environmental Protection Agency (EPA) air pollution data to determine whether or not daily concentrations of PM2.5 have decreased in California from 2002 to 2022.
+
+## Step 1
+
+### Read CSV into Dataframe
+
+The data for 2002 includes 15,976 observations (rows) of 22 variables (columns). The 2022 data has the same 22 variables (columns), but instead has 59,756 observations of each (rows).
+
+```{r}
+Data_2002 = read.csv ("~/Desktop/PM 566/PM566-Labs/PM2.5_2002_Data.csv")
+Data_2022 = read.csv ("~/Desktop/PM 566/PM566-Labs/PM2.5_2022_Data.csv")
+```
+
+### Check Dimensions, Headers, Footers, Variable Names, and Variable Types
+
+Again, this shows that the 2002 and 2022 data sets both have 22 variables (columns), and 15,976 and 59,756 observations (rows) of these variables, respectively.
+
+```{r}
+dim(Data_2002)
+dim(Data_2022)
+```
+
+There do not seem to be any obvious or clear irregularities at the top of the data for either year.
+
+```{r, include=FALSE}
+head(Data_2002)
+head(Data_2022)
+```
+
+The same goes for the bottom of the data (although I did have to check to see if Yolo county was real).
+
+```{r, include=FALSE}
+tail(Data_2002)
+tail(Data_2022)
+```
+
+This function allowed us to double check the number of observations and variables for either data set (which matched the outputs for the other functions above). Too, this function allowed us to see more of our data sets' variable names, variable types, and a few observations for each. Again, there don't seem to be any clear or obvious irregularities.
+
+```{r, include=FALSE}
+str(Data_2002)
+str(Data_2022)
+```
+
+By using the summary function we are able to see various measures of central tendency, measures of spread, and other pieces of information for all 22 of our variables, for each year. Once again, there don't seem to be any clear or obvious irregularities.
+
+```{r, include=FALSE}
+summary(Data_2002)
+summary(Data_2022)
+```
+
+## Step 2
+
+### Combine 2002 and 2022 Data Into One Dataframe
+
+```{r}
+Combined_Data <- rbind(Data_2002, Data_2022)
+```
+
+### Create New Year Column
+
+```{r}
+Combined_Data$Date <- as.Date(Combined_Data$Date, format = "%m/%d/%Y")
+Combined_Data$Year <- format(Combined_Data$Date, "%Y")
+```
+
+### Rename Key Variables
+
+```{r}
+names(Combined_Data)[names(Combined_Data) == "Daily.Mean.PM2.5.Concentration"] <- "Daily_PM2.5"
+names(Combined_Data)[names(Combined_Data) == "Daily.AQI.Value"] <- "Daily_AQI"
+```
+
+## Step 3
+
+### Map of Collection Sites
+
+Although the monitoring sites are spread throughout California, they seem to be more concentrated along the coast, as well as in/around major cities (i.e., Los Angeles, San Francisco, San Jose, San Diego). Too, there are relatively very few sites in Southeast California (Eastern regions of San Bernardino, Riverside, and Imperial counties).
+
+```{r}
+Sites <- (unique(Combined_Data[,c("Site.Latitude","Site.Longitude")]))  
+dim(Sites)
+library(leaflet)
+leaflet(Sites) |> 
+  addProviderTiles('CartoDB.Positron') |> 
+  addCircles(lat = ~Site.Latitude, lng = ~Site.Longitude,
+             opacity = 1, fillOpacity = 1, radius = 400,  color = c('pink', 'red'))
+```
+
+## Step 4
+
+Based on some quick Google searches, most of these daily PM2.5 values seem plausible. Annual averages for California (specifically, Los Angeles) fall around 9 ug/m3, and daily averages can be as high as 35 ug/m3 for the same areas.
+
+We see values much higher than this in our dataset (upwards of 50-69 ug/m3). Still, these values may still be okay as events like wildfires can drastically impact daily PM2.5 concentration averages (e.g., the 2018 Camp Fire in Sacramento lead to a daily PM2.5 concentration of 263 μg/m3, the highest ever recorded in California).
+
+We also see a number of negative values with our daily PM2.5 concentrations. After some more Google searches, I learned that can occur because of two main circumstances: either there is some issue with a measuring instrument, or a measurement is taking place while the atmosphere is extremely clean (approaching 0μg/m3) and there is some level of measurement noise.
+
+After a quick skim of the data, I'm leaning towards thinking that this data set's negative values are due to the latter explanation, as the majority of them do not exceed -1.0μg/m3.
+
+There do not seem to be any missing values for our variables of interest.
+
+## Step 5
+
+### Exploratory Graphs
+
+```{r}
+library(ggplot2)
+```
+
+#### State Level Trends
+
+```{r}
+boxplot(Combined_Data$Daily_PM2.5 ~ Combined_Data$Year, 
+        col = "pink", 
+        pch = 20,
+        main = "Daily PM2.5 Concentrations by Year",
+        xlab = "Year",
+        ylab = "Daily PM2.5 Concentration (µg/m³)",
+        names = unique(Combined_Data$Year))
+```
+
+```{r, include=FALSE}
+library(dplyr)
+median_results <- Combined_Data %>%
+  group_by(Year) %>%
+  summarize(median_PM2.5 = median(Daily_PM2.5, na.rm = TRUE))
+
+print(median_results)
+```
+
+On first glance, the median value for the 2022 data (6.8 µg/m³) seems to be just lower than the same measure for 2002 (12.0 µg/m³). However, the IQR for the 2002 data is much greater than for the 2022 data, made clear by the differences in height of the pink rectangles representing this measure. Too, the max for the 2002 data was higher than for the 2022 data, and the opposite was true for the minimum. Finally, and although both years had a notable amount of outliers, the 2022 data had significantly more than the 2002 data. This difference could be due to an increase of severe weather events like wildfires that can provide extremely high PM2.5 values like those seen in the 2022 data.
+
+#### County Level Trends
+
+```{r, fig.width=10, fig.height=40}
+library(ggplot2)
+Combined_Data[!is.na("County") & !is.na("Year")] |> 
+  ggplot() + 
+  geom_point(mapping = aes(x = Date, y = Daily_PM2.5), color = "pink") +
+  facet_grid(County ~ Year, scales = "free")
+```
+
+When evaluating temporal differences in daily PM2.5 concentrations across counties, we can immediately notice distinct differences between the 2002 and 2022 data.
+
+For instance, most of the data for 2022 is bolder, or more dense, than the 2002 data. This is because there are four times as many observations for 2022 than for 2002.
+
+A handful of counties, Tehama, Modoc, Madera, and Glenn, do not have data for either one or both years, meaning that temporal differences in PM2.5 concentrations cannot be evaluated.
+
+While the majority of PM2.5 concentrations maintain the same shape/trends between the two years, a number of counties' concentrations look very distinct when compared across the two yearly data sets. More specifically, El Dorado, Mariposa, Mono, Nevada, and Placer counties have significantly higher values at various points throughout the 2022 year compared to the same time periods in 2002. These increases/peaks are likely due to increasingly-frequent extreme weather events like wildfires.
+
+#### Site Level Trends
+
+The site in Los Angeles that I chose to evaluate is the Los Angeles-North Main Street Station.
+
+```{r, fig.width = 7.6}
+Combined_Data <- Combined_Data %>%
+  mutate(LA_Site = ifelse(Local.Site.Name == "Los Angeles-North Main Street", Local.Site.Name, NA))
+
+LA_Site <- Combined_Data[!is.na(Combined_Data$LA_Site), ]
+
+Combined_Data[!is.na("LA_Site")] |> 
+  ggplot() + 
+  geom_point(mapping = aes(x = Date, y = Daily_PM2.5, color= "LA_Site"), color = "pink") + 
+  facet_wrap(~ "LA_Site", nrow = 1, scales = "free")+ 
+  labs(title = "Daily PM2.5 Concentrations for Los Angeles-North Main Street Station, 2002 vs. 2022") + 
+  labs(x = expression("Date"), y = "Daily PM2.5 Concentration (µg/m³)")
+```
+
+The data for the LA North Main Street Site is reflective of the overall data for all California Sites. Although the 2002 data is more spread out than the 2022 data, the latter has significantly more outliers. For instance, the highest outlier for the 2002 data seems to be just over 100 µg/m³, whereas the max for the 2022 data is just above 300 µg/m³.
