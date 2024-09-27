@@ -158,9 +158,15 @@ l <- met[!is.na(met$region), ] |>
                fun = median,
                fun.data = mean_sdl)
 l
+labs(title = "Mean Dew Point by Region with Standard Deviation Error Bars",
+       x = "Region",
+       y = "Mean Dew Point") +
+  theme_minimal()
+  summarize(met,
+            dew.point = mean(dew.point))
 ```
 
-Of the four regions, the Southeast had the highest median value for the dew point variable. The Northeast had the next highest median, followed by the Southwest and the Northwest with the lowest median. The Southeast region also had the smallest range between its max and min values, whereas the Northwest had the largest range.
+Of the four regions, the Southeast had the highest median value for the dew point variable. The Northeast had the next highest median, followed by the Southwest and the Northwest with the lowest median. The Southeast region also had the smallest range between its max and min values, whereas the Northwest had the largest range. The overall mean dew point for this dataset is 17.6.
 
 ```{r}
 met <- met[!is.na(met$region),]
@@ -174,9 +180,15 @@ l <- met[!is.na(met$region), ] |>
                fun = median,
                fun.data = mean_sdl)
 l
+labs(title = "Mean Wind Speed by Region with Standard Deviation Error Bars",
+       x = "Region",
+       y = "Mean Wind Speed") +
+  theme_minimal()
+  summarize(met,
+            wind.sp = mean(wind.sp))
 ```
 
-Although the ranges for wind speed are more comparable across regions than the ranges for the dew point data, the Northwest still seems to have the largest range of the four. As for median values, the Southwest seems to have the greatest, followed closely by the Northwest region. The Northeast region has the third highest median, with the Southeast region coming in last.
+Although the ranges for wind speed are more comparable across regions than the ranges for the dew point data, the Northwest still seems to have the largest range of the four. As for median values, the Southwest seems to have the greatest, followed closely by the Northwest region. The Northeast region has the third highest median, with the Southeast region coming in last. The mean wind speed for this data set is 1.96.
 
 ### Step 7
 
