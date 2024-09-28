@@ -4,8 +4,7 @@ author: "Dana Gonzalez"
 format: html
 editor: visual
 embed-resources: true
-code-fold: true
-theme: lux
+theme: cosmo
 ---
 
 ## Assignment Details
@@ -34,28 +33,28 @@ dim(Data_2022)
 
 There do not seem to be any obvious or clear irregularities at the top of the data for either year.
 
-```{r, include=FALSE}
+```{r}
 head(Data_2002)
 head(Data_2022)
 ```
 
 The same goes for the bottom of the data (although I did have to check to see if Yolo county was real).
 
-```{r, include=FALSE}
+```{r}
 tail(Data_2002)
 tail(Data_2022)
 ```
 
 This function allowed us to double check the number of observations and variables for either data set (which matched the outputs for the other functions above). Too, this function allowed us to see more of our data sets' variable names, variable types, and a few observations for each. Again, there don't seem to be any clear or obvious irregularities.
 
-```{r, include=FALSE}
+```{r}
 str(Data_2002)
 str(Data_2022)
 ```
 
 By using the summary function we are able to see various measures of central tendency, measures of spread, and other pieces of information for all 22 of our variables, for each year. Once again, there don't seem to be any clear or obvious irregularities.
 
-```{r, include=FALSE}
+```{r}
 summary(Data_2002)
 summary(Data_2022)
 ```
@@ -89,13 +88,24 @@ names(Combined_Data)[names(Combined_Data) == "Daily.AQI.Value"] <- "Daily_AQI"
 Although the monitoring sites are spread throughout California, they seem to be more concentrated along the coast, as well as in/around major cities (i.e., Los Angeles, San Francisco, San Jose, San Diego). Too, there are relatively very few sites in Southeast California (Eastern regions of San Bernardino, Riverside, and Imperial counties).
 
 ```{r}
+sum(is.na(Combined_Data$Year))
+str(Combined_Data$Year)
+Combined_Data$Year <- as.numeric(as.character(Combined_Data$Year))
+unique(Combined_Data$Year)
+```
+
+```{r}
+Combined_Data <- Combined_Data[!is.na(Combined_Data$Year),]
 Sites <- (unique(Combined_Data[,c("Site.Latitude","Site.Longitude")]))  
 dim(Sites)
 library(leaflet)
-leaflet(Sites) |> 
+
+pal <- colorFactor(c("lightblue", 'darkred'), domain = unique(Combined_Data$Year))
+
+leaflet(data = Combined_Data) |> 
   addProviderTiles('CartoDB.Positron') |> 
   addCircles(lat = ~Site.Latitude, lng = ~Site.Longitude,
-             opacity = 1, fillOpacity = 1, radius = 400,  color = c('pink', 'red'))
+             opacity = 0.01, fillOpacity = 0.001, radius = 1, color = ~pal(Combined_Data$Year))
 ```
 
 ## Step 4
@@ -122,7 +132,7 @@ library(ggplot2)
 
 ```{r}
 boxplot(Combined_Data$Daily_PM2.5 ~ Combined_Data$Year, 
-        col = "pink", 
+        col = "lightblue", 
         pch = 20,
         main = "Daily PM2.5 Concentrations by Year",
         xlab = "Year",
@@ -130,7 +140,7 @@ boxplot(Combined_Data$Daily_PM2.5 ~ Combined_Data$Year,
         names = unique(Combined_Data$Year))
 ```
 
-```{r, include=FALSE}
+```{r}
 library(dplyr)
 median_results <- Combined_Data %>%
   group_by(Year) %>%
@@ -139,7 +149,7 @@ median_results <- Combined_Data %>%
 print(median_results)
 ```
 
-On first glance, the median value for the 2022 data (6.8 µg/m³) seems to be just lower than the same measure for 2002 (12.0 µg/m³). However, the IQR for the 2002 data is much greater than for the 2022 data, made clear by the differences in height of the pink rectangles representing this measure. Too, the max for the 2002 data was higher than for the 2022 data, and the opposite was true for the minimum. Finally, and although both years had a notable amount of outliers, the 2022 data had significantly more than the 2002 data. This difference could be due to an increase of severe weather events like wildfires that can provide extremely high PM2.5 values like those seen in the 2022 data.
+At first glance, the median value for the 2022 data (6.8 µg/m³) seems to be just lower than the same measure for 2002 (12.0 µg/m³). However, the IQR for the 2002 data is much greater than for the 2022 data, made clear by the differences in height of the pink rectangles representing this measure. Too, the max for the 2002 data was higher than for the 2022 data, and the opposite was true for the minimum. Finally, and although both years had a notable amount of outliers, the 2022 data had significantly more than the 2002 data. This difference could be due to an increase of severe weather events like wildfires that can provide extremely high PM2.5 values like those seen in the 2022 data.
 
 #### County Level Trends
 
@@ -147,7 +157,7 @@ On first glance, the median value for the 2022 data (6.8 µg/m³) seems to be ju
 library(ggplot2)
 Combined_Data[!is.na("County") & !is.na("Year")] |> 
   ggplot() + 
-  geom_point(mapping = aes(x = Date, y = Daily_PM2.5), color = "pink") +
+  geom_point(mapping = aes(x = Date, y = Daily_PM2.5), color = "darkred") +
   facet_grid(County ~ Year, scales = "free")
 ```
 
@@ -163,17 +173,17 @@ While the majority of PM2.5 concentrations maintain the same shape/trends betwee
 
 The site in Los Angeles that I chose to evaluate is the Los Angeles-North Main Street Station.
 
-```{r, fig.width = 7.6}
+```{r}
 Combined_Data <- Combined_Data %>%
-  mutate(LA_Site = ifelse(Local.Site.Name == "Los Angeles-North Main Street", Local.Site.Name, NA))
+  mutate(LA_Site = ifelse(Local.Site.Name == "Los Angeles-North Main Street", Local.Site.Name, "NA"))
 
 LA_Site <- Combined_Data[!is.na(Combined_Data$LA_Site), ]
 
-Combined_Data[!is.na("LA_Site")] |> 
-  ggplot() + 
-  geom_point(mapping = aes(x = Date, y = Daily_PM2.5, color= "LA_Site"), color = "pink") + 
-  facet_wrap(~ "LA_Site", nrow = 1, scales = "free")+ 
-  labs(title = "Daily PM2.5 Concentrations for Los Angeles-North Main Street Station, 2002 vs. 2022") + 
+Combined_Data[!is.na("LA_Site")] |>
+  ggplot() +
+  geom_point(mapping = aes(x = Date, y = Daily_PM2.5, color= "LA_Site"), color = "lightblue") +
+  facet_wrap(~ "LA_Site", nrow = 1, scales = "free")+
+  labs(title = "Daily PM2.5 Concentration for Los Angeles-North Main Street Station, 2002 versus 2022")+
   labs(x = expression("Date"), y = "Daily PM2.5 Concentration (µg/m³)")
 ```
 
