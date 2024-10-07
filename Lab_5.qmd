@@ -92,6 +92,7 @@ quantiles_df <- data.frame(
 
 quantiles_df
 ```
+
 ```{r}
 any(duplicated(names(met)))
 names(met) <- make.unique(names(met))
@@ -175,6 +176,7 @@ leaflet(median_temp) |>
   addCircles(lat = ~LAT, lng = ~LON,
              opacity = 1, fillOpacity = 1, radius = 400, color = "lightblue")
 ```
+
 ```{r}
 library(leaflet)
 median_wind2 <- (unique(median_wind[,c("LAT","LON")])) 
@@ -183,7 +185,6 @@ leaflet(median_wind) |>
   addCircles(lat = ~LAT, lng = ~LON,
              opacity = 1, fillOpacity = 1, radius = 400, color = "darkred")
 ```
-
 
 ```{r}
 library(leaflet)
@@ -230,6 +231,7 @@ latitude <- st_coordinates(closest_stations)[, 2]
 closest_stations2 <- data.frame(stations_sf$STATE, latitude, longitude)
 closest_stations2
 ```
+
 ```{r}
 library(leaflet)
 closest_map <- leaflet() %>%
@@ -276,6 +278,7 @@ average_temp_by_state <- met %>%
   ))
 average_temp_by_state
 ```
+
 ### Number of entries (records)
 
 ```{r}
@@ -323,7 +326,6 @@ mean_wind
 mean_pressure <- mean(met$atm.press, na.rm = TRUE)
 mean_pressure
 ```
-
 
 ### Summary Table by Average Temperature Level
 

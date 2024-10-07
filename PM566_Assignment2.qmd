@@ -1,0 +1,318 @@
+---
+title: "PM 566 Assignment 2"
+author: "Dana Gonzalez"
+format: html
+editor: visual
+embed-resources: true
+theme: cosmo
+---
+
+# Data Wrangling
+
+### Load and Merge Datasets
+
+```{r}
+individual <- read.csv("/Users/danagonzalez/Downloads/chs_individual.csv")
+regional <- read.csv("/Users/danagonzalez/Downloads/chs_regional.csv")
+
+combined <- merge(individual, regional, by = "townname", all = FALSE)
+
+nrow(combined)
+summary(combined)
+```
+
+### Impute Data
+
+```{r}
+library(dplyr)
+
+get_mode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+modes <- sapply(combined, get_mode)
+
+modes
+
+combined$agepft[is.na(combined$agepft)] <- 9.924
+combined$height[is.na(combined$height)] <- 139
+combined$weight[is.na(combined$weight)] <- 79.33
+combined$bmi[is.na(combined$bmi)] <- 18.5
+combined$asthma[is.na(combined$asthma)] <- 0
+combined$father_asthma[is.na(combined$father_asthma)] <- 0
+combined$mother_asthma[is.na(combined$mother_asthma)] <- 0
+combined$wheeze[is.na(combined$wheeze)] <- 0
+combined$hayfever[is.na(combined$hayfever)] <- 0
+combined$allergy[is.na(combined$allergy)] <- 0
+combined$educ_parent[is.na(combined$educ_parent)] <- 3
+combined$smoke[is.na(combined$smoke)] <- 0
+combined$gasstove[is.na(combined$gasstove)] <- 1
+combined$fev[is.na(combined$fev)] <- 2031.3
+combined$fvc[is.na(combined$fvc)] <- 2324
+combined$mmef[is.na(combined$mmef)] <-2398.8
+combined$no_24hr[is.na(combined$no_24hr)] <-2.48
+combined$pm2_5_fr[is.na(combined$pm2_5_fr)] <- 19.79
+```
+
+### Create New Obesity Variable and Summary Table
+
+```{r}
+combined <- combined %>%
+  mutate(obesity_level = case_when(
+    bmi < 14 ~ "Underweight",
+    bmi >= 14 & bmi < 22 ~ "Normal",
+    bmi >= 22 & bmi < 24 ~ "Overweight",
+    bmi >= 24 ~ "Obese"))
+
+obesity_summary <- combined %>%
+  group_by(obesity_level) %>%
+  summarise(
+    min_bmi = min(bmi, na.rm = TRUE),
+    max_bmi = max(bmi, na.rm = TRUE),
+    observations = n())
+obesity_summary
+```
+
+
+### Create New Exposure Variable and Summary Table
+
+```{r}
+combined <- combined %>%
+  mutate(smoke_gas_exposure = case_when(
+    smoke == "1" & gasstove == "1" ~ "Both",
+    smoke == "1" & gasstove == "0" ~ "Second Hand Smoke Only",
+    smoke == "0" & gasstove == "1" ~ "Gas Stove Only",
+    smoke == "0" & gasstove == "0" ~ "Neither"))
+
+smoke_summary <- combined %>%
+  group_by(smoke_gas_exposure) %>%
+  summarise(
+    observations = n())
+smoke_summary
+```
+
+### Create Additional Summary Tables
+
+```{r}
+summary_town <- combined %>%
+  group_by(townname) %>%
+  summarise(
+    average_fev = mean(fev, na.rm = TRUE),
+    sd_fev = sd(fev, na.rm = TRUE),
+    .groups = "drop")
+summary_sex <- combined %>%
+  group_by(male) %>%
+  summarise(
+    average_fev = mean(fev, na.rm = TRUE),
+    sd_fev = sd(fev, na.rm = TRUE),
+    .groups = "drop")
+summary_obesity <- combined %>%
+  group_by(obesity_level) %>%
+  summarise(
+    average_fev = mean(fev, na.rm = TRUE),
+    sd_fev = sd(fev, na.rm = TRUE),
+    .groups = "drop")
+summary_smoke_gas <- combined %>%
+  group_by(smoke_gas_exposure) %>%
+  summarise(
+    average_fev = mean(fev, na.rm = TRUE),
+    sd_fev = sd(fev, na.rm = TRUE),
+    .groups = "drop")
+
+summary_town
+summary_sex
+summary_obesity
+summary_smoke_gas
+```
+
+# Exploratory Data Analysis
+
+### Association between BMI and Forced Expiratory Volume (FEV)
+
+```{r}
+library(ggplot2)
+
+ggplot(data = combined, mapping = aes(x = bmi, y = fev)) + 
+  geom_point() +
+  geom_smooth(method = "loess", col = "pink", se = FALSE) +
+  labs(title = "Scatterplot of BMI vs Forced Expiratory Volume (mL/sec)", 
+       x = "BMI", 
+       y = "FEV (mL)")
+```
+
+Based on this preliminary visualization, there seems to be a positive association between BMI and FEV. This relationship is maintained until a BMI level of about 30, where the relationship becomes slightly negative.
+
+### Association between Smoke and Gas Exposure and Forced Expiratory Volume (FEV)
+
+```{r}
+labels_data <- combined %>%
+  group_by(smoke_gas_exposure) %>%
+  summarise(mean_fev = mean(fev, na.rm = TRUE))
+
+combined |>
+  ggplot(mapping = aes(x = smoke_gas_exposure, y = fev, fill = smoke_gas_exposure)) + 
+  geom_boxplot() +
+  scale_fill_brewer(palette = "RdPu") +
+  labs(title = "Forced Expiratory Volume (mL/sec) by Smoke and Gas Exposure",
+       x = "Smoke and Gas Exposure", 
+       y = "Forced Expiratory Volume (mL/sec)") +
+  geom_text(data = labels_data, aes(x = smoke_gas_exposure, y = mean_fev, label = round(mean_fev, 1)),
+            vjust = -0.75, color = "black", size = 3) +
+  theme_minimal()
+```
+
+Based on this preliminary visualization, there do not seem to be significant differences in FEV across smoke and gas exposure categories, although further analysis is required. 
+
+### Association between PM2.5 Exposure and Forced Expiratory Volume (FEV)
+
+```{r}
+combined <- combined %>%
+  mutate(pm25_exposure = pm25_so4 +pm25_no3 + pm25_nh4 + pm25_oc + pm25_ec + pm25_om)
+```
+
+
+```{r}
+ggplot(data = combined, mapping = aes(x = pm25_exposure, y = fev)) + 
+  geom_point() +
+  geom_smooth(method = "loess", col = "pink", se = FALSE) +
+  labs(title = "Scatterplot of PM2.5 Exposure vs Forced Expiratory Volume (mL/sec)", 
+       x = "PM2.5 Exposure", 
+       y = "FEV (mL/sec)")
+```
+
+Based on this preliminary visualization, there seems to be a slightly negative (although weak) relationship between PM2.5 exposure and forced expiratory volume (FEV). 
+
+# Data Visualization
+
+### Scatterplots of BMI vs FEV by Town
+
+```{r, fig.width=10}
+combined[!is.na(combined$townname), ] |> 
+  ggplot() + 
+  geom_point(mapping = aes(x = bmi, y = fev)) + 
+  facet_wrap(~ townname, scales = "free") +
+  geom_smooth(mapping = aes(x = bmi, y = fev), method = "loess", col = "pink", se = FALSE) +
+  labs(title = "Scatterplots of BMI vs Forced Expiratory Volume (FEV) by Town", 
+       x = "BMI", 
+       y = "FEV (mL/sec)")
+```
+
+Although the associations between BMI and FEV vary between towns, most seem to be positive and strong in nature (although further analysis is required to fully determine this.) Further, some towns (like Altascadero) have a more linear relationship between the two variables of interest relative to other towns (like Alpine, Lake Gregory, and Mira Loma). It's also important to note that some towns (like Lompoc, Mira Loma, and San Dimas) have regression lines that turn negative (downward) with higher BMI values, although further analysis is required to investigate the possible cause of this.
+
+### Stacked histograms of FEV by BMI category
+
+```{r}
+ggplot(combined, aes(x = fev, fill = factor(obesity_level))) +
+  geom_histogram(position = "stack", bins = 25) +
+  labs(title = "Stacked Histogram of FEV by BMI Category",
+       x = "FEV (mL/sec)",
+       y = "Count") +
+  scale_fill_brewer(palette = "RdPu") +
+  theme_minimal()
+```
+
+Based on this stacked histogram, we can immediately see that the majority of observations for the BMI variable fall under the "Normal" level, with far less for "Obese", "Overweight", and "Underweight" (in descending order). Too, most observations for the "Normal" category are concentrated around an FEV value of 2000, with counts of observations tapering off in either direction from this peak (unimodal, normal distribution). Although the distributions for the remaining three categories are also unimodal (with the exception of "Overweight"), their respective peaks are shifted ("Obese" = 2250, "Underweight" = 1650). 
+
+### Stacked histograms of FEV by Smoke and Gas Exposure Category
+
+```{r}
+ggplot(combined, aes(x = fev, fill = factor(smoke_gas_exposure))) +
+  geom_histogram(position = "stack", bins = 25) +
+  labs(title = "Stacked Histogram of FEV by Smoke and Gas Exposure Category",
+       x = "FEV (mL/sec)",
+       y = "Count") +
+  scale_fill_brewer(palette = "RdPu") +
+  theme_minimal()
+```
+
+Unlike the previous stacked histogram, the majority of observations come from two categories: "Both" and "Gas Stove Only". Too, the distributions for all four categories seem to me unimodal and normally distributed, with respective peaks concentrated around an FEV value of 2000.
+
+### Barchart of BMI by Smoke and Gas Exposure.
+
+```{r, fig.width = 12}
+ggplot(data = combined, aes(x = cut(bmi, breaks = 15), fill = factor(smoke_gas_exposure))) + 
+  geom_bar(position = "stack") +
+  scale_fill_brewer(palette = "RdPu") +
+  labs(title = "Stacked Bar Chart of BMI by Smoke and Gas Exposure",
+       x = "BMI",
+       y = "Count") +
+  theme_minimal()
+```
+
+This stacked bar chart shows that the majority of BMI data falls under the "Both" and "Gas Stove Only" categories. Too, while this distribution is unimodal (centered at BMI values around 15-19), the entire distribution is skewed to the right (smaller BMI values).
+
+### Boxplot (Statistical Summary Graph) of FEV by Obesity Level
+
+```{r}
+labels_data2 <- combined %>%
+  group_by(obesity_level) %>%
+  summarise(mean_fev = mean(fev, na.rm = TRUE))
+
+ggplot(data = combined, aes(x = obesity_level, y = fev, fill = obesity_level)) + 
+  geom_boxplot() +
+  labs(title = "Boxplot of Forced Expiratory Volume by Obesity Level",
+       x = "Obesity Level",
+       y = "FEV (mL/sec)") +
+  scale_fill_brewer(palette = "RdPu") +
+  geom_text(data = labels_data2, aes(x = obesity_level, y = mean_fev, label = round(mean_fev, 1)),
+            vjust = -0.75, color = "black", size = 3) +
+  theme_minimal()
+```
+
+Comparing the boxplots of FEV across obesity levels we can see distinct differences in the median values for each BMI category. While the medians for "Obese" and "Overweight" are relatively close (also the two highest medians across categories), the median for the "Normal" group is slightly less. The median FEV value for the "Underweight" group is the lowest of the four groups (around 300 units less than the "Normal" median, and around 450 units less than for the remaining two categories).
+
+### Boxplot (Statistical Summary Graph) of FEV by Smoke and Gas Exposure Category
+
+```{r}
+labels_data <- combined %>%
+  group_by(smoke_gas_exposure) %>%
+  summarise(mean_fev = mean(fev, na.rm = TRUE))
+
+ggplot(data = combined, aes(x = smoke_gas_exposure, y = fev, fill = smoke_gas_exposure)) + 
+  geom_boxplot() +
+  labs(title = "Boxplot of Forced Expiratory Volume by Smoke and Gas Exposure Category",
+       x = "Smoke and Gas Exposure Category",
+       y = "FEV (mL/sec)") +
+  scale_fill_brewer(palette = "RdPu") +
+  geom_text(data = labels_data, aes(x = smoke_gas_exposure, y = mean_fev, label = round(mean_fev, 1)),
+            vjust = -0.75, color = "black", size = 3) +
+  theme_minimal()
+```
+
+As discussed previously, the median FEV values across the four smoke and gas exposure categories are relatively similar. Of the four groups, the "Neither" group had the highest median FEV value at 2059.1 mL/second, and the "Gas Stove Only" group had the lowest at 2023.5 mL/second. However, further analysis is required to determine if these differences in median values are statistically significant.
+
+### Map showing the concentrations of PM2.5 mass in each of the CHS communities
+
+```{r}
+library(leaflet)
+leaflet(data = combined) |> 
+  addProviderTiles('CartoDB.Positron') |> 
+  addCircles(lat = ~lat, lng = ~lon, 
+             opacity = 1,
+             fillOpacity = 0.7,
+             radius = ~pm25_mass * 200,
+             color = "pink",
+             popup = ~paste(townname, "<br>", "PM2.5 Mass:", pm25_mass, "µg/m³")) |> 
+  addLegend(position = "bottomright", 
+            colors = "pink", 
+            labels = "PM2.5 Mass Concentrations",
+            title = "Legend")
+```
+
+This leaflet map showcasing PM2.5 mass concentrations across the 12 communities in this study points to greater concentrations in communities closer to Los Angeles. This makes sense, as urban contributors to air pollution and air quality likely have a heavy role in PM2.5 mass. We see the smallest mass concentration in the northern-most communities in this study (which are also located along or closer to California's coast, and thus may benefit geographically in overall air quality).
+
+### PM2.5 mass and FEV Associations.
+
+```{r}
+summary(combined$pm25_mass)
+ggplot(data = combined, mapping = aes(x = pm25_mass, y = fev)) + 
+  geom_point() +
+  geom_smooth(method = "loess", col = "pink", se = FALSE) +
+  labs(title = "Scatterplot of PM2.5 Mass vs Forced Expiratory Volume (mL/sec)", 
+       x = "PM2.5 Mass", 
+       y = "FEV (mL/sec)") + 
+  xlim(5.96, 29.97) 
+```
+
+Based on this scatter plot, there seems to be a negative (although weak) association between PM2.5 mass and forced expiratory volume (FEV). 
