@@ -1,0 +1,220 @@
+---
+title: "PM 566 Lab 6"
+author: "Dana Gonzalez"
+format: html
+editor: visual
+embed-resources: true
+theme: cosmo
+---
+
+# Setup Packages
+
+```{r}
+library(tidytext)
+library(dplyr)
+library(ggplot2)
+```
+
+# Read in Medical Transcriptions
+
+```{r}
+library(readr)
+library(dplyr)
+mt_samples <- read_csv("https://raw.githubusercontent.com/USCbiostats/data-science-data/master/00_mtsamples/mtsamples.csv")
+mt_samples <- mt_samples %>%
+  select(description, medical_specialty, transcription)
+
+head(mt_samples)
+```
+# Question 1
+
+### Count of Specialty Types
+
+```{r}
+mt_samples %>%
+  count(medical_specialty, sort = TRUE)
+```
+
+Running this code, we get 40 specialty types. However we must note that some of the "specialty types" included in this count include items such as "SOAP / Chart / Progress Notes" and "Discharge Summary", which may not be actual specialty types and thus distort this count. Not counting these types of items, we get approximately 34 specialty types.
+
+### Barchart of Observations per Specialty Type
+
+```{r}
+mt_samples |>
+  ggplot() + 
+  geom_bar(mapping = aes(x = medical_specialty), fill = "goldenrod") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  labs(title = "Counts of Observations per Specialty Type",
+       x = "Specialty Type",
+       y = "Count")
+```
+
+Looking at this barchart, we can clearly see that the medical specialties with the majority of the dataset's observations are Surgery, Consult - History and Phy., and Cardiovascular/Pulmonary. As mentioned above, some of these "specialty types", such as Consult - History and Phy., may not be actual specialty types but a type of visit or note.
+
+# Question 2
+
+### Tokenize Words in "Transcription" Column + Token Counts
+
+```{r}
+tokenized <- mt_samples |>
+  unnest_tokens(word, transcription) |>
+  count(word, sort = TRUE)
+```
+
+### Visualize the Top 20 Most Frequent Words
+
+```{r}
+tokenized_counts <- mt_samples |>
+  unnest_tokens(word, transcription) |>
+  count(word, sort = TRUE) |>
+  slice_max(n, n = 20)
+
+tokenized_counts |>
+  ggplot(aes(n, word)) +
+  geom_col(fill = "goldenrod") +
+  labs(title = "Top 20 Most Frequent Words from 'Transcription' Column",
+       x = "Count",
+       y = "Word") +
+  theme_minimal()
+```
+
+Looking at this barchart, the top 20 most frequent word in the "transcription" column are fairly common words across all contexts (i.e., "stopwords" like "the", "and, "was). Because of this, we don't get much insight into this data from this count alone.
+
+# Question 3
+
+### Visualization without Stopwords and Numbers
+
+```{r}
+tokenized_counts <- mt_samples |>
+  unnest_tokens(word, transcription) |>
+  anti_join(stop_words, by = c("word" = "word")) |>
+  filter(!grepl("[0-9]", word)) |>
+  count(word, sort = TRUE) |>
+  slice_max(n, n = 20)
+
+tokenized_counts |>
+  ggplot(aes(n, word)) +
+  geom_col(fill = "goldenrod") +
+  labs(title = "Top 20 Most Frequent Words from 'Transcription' Column (Without Stopwords)",
+       x = "Count",
+       y = "Word") +
+  theme_minimal()
+```
+
+Yes, removing stopwords and numbers provides us with a much idea of what this dataset is about. Looking at this barchart, we can clearly see that this dataset is medical/clinical in nature, with words like "patient", "procedure", "anesthesia", etc. Too, with words like "anesthesia", "incision", and "removed" we are reminded of that "Surgery" was the most frequent specialty type according to our analysis above.
+
+# Question 4
+
+### Tokenize into Bi-Grams + Token Counts
+
+```{r}
+mt_samples |>
+  unnest_ngrams(ngram, transcription, n = 2) |>
+  count(ngram, sort = TRUE)
+```
+
+### Visualize the Top 20 Most Frequent Bi-Grams
+
+```{r}
+tokenized_bi_counts <- mt_samples |>
+  unnest_ngrams(ngram, transcription, n = 2) |>
+  count(ngram, sort = TRUE) |>
+  slice_max(n, n = 20)
+
+tokenized_bi_counts |>
+  ggplot(aes(n, ngram)) +
+  geom_col(fill = "goldenrod") +
+  labs(title = "Top 20 Most Frequent Bi-Grams from 'Transcription' Column",
+       x = "Count",
+       y = "Bi-Gram") +
+  theme_minimal()
+```
+
+### Tokenize into Tri-Grams + Token Counts
+
+```{r}
+mt_samples |>
+  unnest_ngrams(ngram, transcription, n = 3) |>
+  count(ngram, sort = TRUE)
+```
+
+### Visualize the Top 20 Most Frequent Tri-Grams
+
+```{r}
+tokenized_tri_counts <- mt_samples |>
+  unnest_ngrams(ngram, transcription, n = 3) |>
+  count(ngram, sort = TRUE) |>
+  slice_max(n, n = 20)
+
+tokenized_tri_counts |>
+  ggplot(aes(n, ngram)) +
+  geom_col(fill = "goldenrod") +
+  labs(title = "Top 20 Most Frequent Tri-Grams from 'Transcription' Column",
+       x = "Count",
+       y = "Bi-Gram") +
+  theme_minimal()
+```
+
+By comparing the barcharts for bi-grams and tri-grams, we see that there is a much greater number of observations per bi-gram than for the tri-grams. This makes sense, as bi-grams (two words) are less specific and may thus occur more frequently in the dataset than tri-grams (three words). Too, the bi-grams "distribution" could be considered to be multimodal (most common bi-grams: "the patient", "of the", "to the" and "in the"). Contrastingly, the "distribution" for the tri-grams is very clearly unimodal with the most common tri-gram being "the patient was". 
+
+# Question 5 
+
+```{r}
+chosen_word <- "history"
+
+before_after_counts <- mt_samples |>
+  unnest_tokens(word, transcription) |>
+  mutate(next_word = lead(word), previous_word = lag(word)) |>
+  filter(next_word == chosen_word | previous_word == chosen_word) |>
+  mutate(position = ifelse(next_word == chosen_word, "before", "after")) |>
+  count(word = ifelse(next_word == chosen_word, previous_word, next_word), 
+        position, sort = TRUE)
+
+before_after_counts
+```
+
+# Question 6
+
+### Top 20 Words by Specialty without Stopwords and Numbers
+
+```{r, fig.width = 25, fig.height = 20}
+tokenized_specialty_counts <- mt_samples |>
+  unnest_tokens(word, transcription) |>
+  anti_join(stop_words, by = c("word" = "word")) |>
+  filter(!grepl("[0-9]", word)) |>
+  count(medical_specialty, word, sort = TRUE) |>
+  group_by(medical_specialty) |>
+  slice_max(n, n = 20) |>
+  ungroup()
+
+tokenized_specialty_counts |>
+  ggplot(aes(n, word, fill = medical_specialty)) +
+  geom_col(show.legend = TRUE) +
+  labs(title = "Top 20 Most Frequent Words by Medical Specialty (Without Stopwords)",
+       x = "Count",
+       y = "Word") +
+  theme_minimal() +
+  facet_wrap(~medical_specialty, scales = "free_y")
+```
+### Top 5 Words by Specialty without Stopwords and Numbers
+
+```{r, fig.width = 25, fig.height = 20}
+tokenized_specialty_counts2 <- mt_samples |>
+  unnest_tokens(word, transcription) |>
+  anti_join(stop_words, by = c("word" = "word")) |>
+  filter(!grepl("[0-9]", word)) |>
+  count(medical_specialty, word, sort = TRUE) |>
+  group_by(medical_specialty) |>
+  slice_max(n, n = 5) |>
+  ungroup()
+
+tokenized_specialty_counts2 |>
+  ggplot(aes(n, word, fill = medical_specialty)) +
+  geom_col(show.legend = TRUE) +
+  labs(title = "Top 5 Most Frequent Words by Medical Specialty (Without Stopwords)",
+       x = "Count",
+       y = "Word") +
+  theme_minimal() +
+  facet_wrap(~medical_specialty, scales = "free_y")
+```
+
