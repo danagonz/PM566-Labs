@@ -74,7 +74,6 @@ obesity_summary <- combined %>%
 obesity_summary
 ```
 
-
 ### Create New Exposure Variable and Summary Table
 
 ```{r}
@@ -162,7 +161,7 @@ combined |>
   theme_minimal()
 ```
 
-Based on this preliminary visualization, there do not seem to be significant differences in FEV across smoke and gas exposure categories, although further analysis is required. 
+Based on this preliminary visualization, there do not seem to be significant differences in FEV across smoke and gas exposure categories, although further analysis is required.
 
 ### Association between PM2.5 Exposure and Forced Expiratory Volume (FEV)
 
@@ -170,7 +169,6 @@ Based on this preliminary visualization, there do not seem to be significant dif
 combined <- combined %>%
   mutate(pm25_exposure = pm25_so4 +pm25_no3 + pm25_nh4 + pm25_oc + pm25_ec + pm25_om)
 ```
-
 
 ```{r}
 ggplot(data = combined, mapping = aes(x = pm25_exposure, y = fev)) + 
@@ -181,7 +179,7 @@ ggplot(data = combined, mapping = aes(x = pm25_exposure, y = fev)) +
        y = "FEV (mL/sec)")
 ```
 
-Based on this preliminary visualization, there seems to be a slightly negative (although weak) relationship between PM2.5 exposure and forced expiratory volume (FEV). 
+Based on this preliminary visualization, there seems to be a slightly negative (although weak) relationship between PM2.5 exposure and forced expiratory volume (FEV).
 
 # Data Visualization
 
@@ -212,7 +210,7 @@ ggplot(combined, aes(x = fev, fill = factor(obesity_level))) +
   theme_minimal()
 ```
 
-Based on this stacked histogram, we can immediately see that the majority of observations for the BMI variable fall under the "Normal" level, with far less for "Obese", "Overweight", and "Underweight" (in descending order). Too, most observations for the "Normal" category are concentrated around an FEV value of 2000, with counts of observations tapering off in either direction from this peak (unimodal, normal distribution). Although the distributions for the remaining three categories are also unimodal (with the exception of "Overweight"), their respective peaks are shifted ("Obese" = 2250, "Underweight" = 1650). 
+Based on this stacked histogram, we can immediately see that the majority of observations for the BMI variable fall under the "Normal" level, with far less for "Obese", "Overweight", and "Underweight" (in descending order). Too, most observations for the "Normal" category are concentrated around an FEV value of 2000, with counts of observations tapering off in either direction from this peak (unimodal, normal distribution). Although the distributions for the remaining three categories are also unimodal (with the exception of "Overweight"), their respective peaks are shifted ("Obese" = 2250, "Underweight" = 1650).
 
 ### Stacked histograms of FEV by Smoke and Gas Exposure Category
 
@@ -228,19 +226,19 @@ ggplot(combined, aes(x = fev, fill = factor(smoke_gas_exposure))) +
 
 Unlike the previous stacked histogram, the majority of observations come from two categories: "Both" and "Gas Stove Only". Too, the distributions for all four categories seem to me unimodal and normally distributed, with respective peaks concentrated around an FEV value of 2000.
 
-### Barchart of BMI by Smoke and Gas Exposure.
+### Barchart of BMI Category by Smoke and Gas Exposure.
 
-```{r, fig.width = 12}
-ggplot(data = combined, aes(x = cut(bmi, breaks = 15), fill = factor(smoke_gas_exposure))) + 
-  geom_bar(position = "stack") +
+```{r}
+ggplot(combined, aes(x = obesity_level, fill = smoke_gas_exposure)) +
+  geom_bar(position = "dodge") +
   scale_fill_brewer(palette = "RdPu") +
-  labs(title = "Stacked Bar Chart of BMI by Smoke and Gas Exposure",
-       x = "BMI",
+  labs(title = "Bar Chart of BMI Category by Smoke and Gas Exposure",
+       x = "Obesity Level",
        y = "Count") +
   theme_minimal()
 ```
 
-This stacked bar chart shows that the majority of BMI data falls under the "Both" and "Gas Stove Only" categories. Too, while this distribution is unimodal (centered at BMI values around 15-19), the entire distribution is skewed to the right (smaller BMI values).
+This bar chart shows that the majority of BMI/Obesity Level falls under the "Both" and "Gas Stove Only" categories for smoke and gas exposure. Too, the majority of observations for BMI/Obesity Level are categorized under the "Normal" category.
 
 ### Boxplot (Statistical Summary Graph) of FEV by Obesity Level
 
@@ -315,4 +313,4 @@ ggplot(data = combined, mapping = aes(x = pm25_mass, y = fev)) +
   xlim(5.96, 29.97) 
 ```
 
-Based on this scatter plot, there seems to be a negative (although weak) association between PM2.5 mass and forced expiratory volume (FEV). 
+Based on this scatter plot, there seems to be a negative (although weak) association between PM2.5 mass and forced expiratory volume (FEV).
