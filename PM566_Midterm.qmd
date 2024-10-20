@@ -1,58 +1,21 @@
 ---
-title: "PM 566 Midterm"
+title: "PM 566 Midterm Assignment"
 author: "Dana Gonzalez"
 format: html
 editor: visual
 embed-resources: TRUE
 theme: cosmo
 ---
+
 # Read in CSV File
 
-```{r}
+```{r, results='hide', message=FALSE}
 data <- read.table("~/Downloads/AtlasPlusTableData.csv", header = TRUE, sep = ",")
 ```
 
-# Introduction
+# Load Libraries
 
-Hepatitis C virus (HCV) infection is the most common bloodborne infection in the United States. In addition to this, national incidence rates for the disease have nearly doubled in the last decade. While the "baby-boomer" generation (those born between 1946 and 1964, and most likely to have received a blood transfusion before universal screening guidelines) has historically been identified as a key at-risk population, an increasing number of new cases have been reported in younger individuals.
-
-In this assignment, I will visualize trends in HCV incidence rate for the age groups included in the dataset, and determine which group has had the steepest or most dramatic increase in new cases for the period of interest.
-
-This dataset has 6 variables: "Indicator" ("Acute Viral Hepatitis C" for all observations), "Year", "Age.Group," Cases", "Rate.per.100.000" and "X" (denotes the type of rate, "Incidence Rate" across all observations).
-
-# Methods
-
-My chosen dataset comes from the CDC's National Center for HIV, Viral Hepatitis, STD, and Tuberculosis Prevention (NCHHSTP) site. This center's site provides access to AtlasPlus, an interactive tool that allows users, like myself, to download disease surveillance data from the last 20 years. Using this tool, I downloaded national age-specific incidence rates for Hepatitis C (HCV) from 2000 to 2022. 
-
-In cleaning the data, I chose to first remove the "Indicator" and "X" columns, as they were consistent across all observations. I also made sure to check for missing values, although collecting data through AtlasPlus should have not included any of this type of data. Further, I renamed the remaining variables to be more concise and consistent. Finally, I gathered measures of central tendency and spread for my continous variables using the summary() function.
-
-```{r}
-# Remove "Indicator" and "X" Columns
-library(dplyr)
-data <- data %>%
-  select(-Indicator, -X)
-
-# Check for Missing Data
-missing_data <- colSums(is.na(data))
-missing_data
-
-# Rename Variables
-data <- data |>
-  rename(
-    year = Year,
-    age_group = Age.Group,
-    cases = Cases,
-    incidence_rate = Rate.per.100.000)
-
-# Variable Summaries
-summary(data)
-```
-
-# Preliminary Data
-
-### Load Libraries
-
-```{r}
+```{r, results='hide', message=FALSE}
 library(dplyr)
 library(ggplot2)
 library(knitr)
@@ -60,14 +23,81 @@ library(kableExtra)
 library(RColorBrewer)
 ```
 
+# Introduction
 
-### Number of Observations per Year
+Hepatitis C virus (HCV) infection is the most common blood-borne infection in the United States. National surveillance data has shown a significant rise in acute HCV cases (those in the first 6 months of infection) in the last decade, with case counts having nearly doubled.
 
-```{r}
+**In this assignment, I will visualize trends in HCV incidence rate for the racial/ethnic groups included in my chosen dataset, and determine which group(s) have seen the greatest rise in incidence for the time period of interest by calculating the percent change in incidence from 2000 to 2022**.
+
+This dataset includes the following five variables: 
+
+- "Indicator" ("Acute Viral Hepatitis C" for all observations)
+- "Year" (2000-2022)
+- "Race.Ethnicity"
+  - "American Indian/Alaska Native"
+  - "Asian/Pacific Islander"
+  - "Black/African American"
+  - "Hispanic/Latino"
+  - "White"
+  - "Other"
+  - "Unknown"
+- "Cases" (crude case counts)
+- "Rate.per.100.000" (incidence rate)
+
+# Methods
+
+My chosen dataset comes from the CDC's National Center for HIV, Viral Hepatitis, STD, and Tuberculosis Prevention (NCHHSTP) site. This center's site provides access to AtlasPlus, an interactive tool that allows users, like myself, to download disease surveillance data from the last 20 years. Using this tool, I downloaded national racial/ethnic group-specific incidence rates for Hepatitis C (HCV) from 2000 to 2022.
+
+In cleaning the data, I chose to first remove the "Indicator" column, as it was consistent for all observations. Further, I noticed upon reviewing my dataset that there was no data available for the "Other" and "Unknown" racial/ethnic groups, so I chose to exclude them from my analysis and only focus on the remaining groups with data. Next, I renamed the remaining variables to be more concise and easier to recall throughout this assignment.
+
+Finally, I gathered summary measures for my dataset's continuous variables using the summary() function. In doing this step, I realized my case and incidence rate variables were being treated as characters, so I changed them to a numeric class (making sure to remove commas to avoid introducing NAs by coercion). 
+
+The summary statistics for the "case" variable included (by group):
+
+- Median yearly case count: 67.0
+- Minimum yearly case count: 3.0
+- Maximum yearly case count: 3097.0
+
+The summary statistics for the "incidence_rate" variable included (by group):
+
+- Median incidence rate per 100,000: 0.30
+- Minimum incidence rate per 100,000: 0.0
+- Maximum incidence rate per 100,000: 3.7
+
+```{r, results='hide', message=FALSE}
+# Remove "Indicator" Column
+data <- data |>
+  select(-Indicator)
+
+# Exclude Data for "Other" and "Unknown" Groups
+data <- data[!(data$Race.Ethnicity %in% c("Other", "Unknown")), ]
+
+# Rename Variables
+data <- data |>
+  rename(
+    year = Year,
+    group = Race.Ethnicity,
+    cases = Cases,
+    incidence_rate = Rate.per.100000)
+data$year <- gsub("\\(COVID-19 Pandemic\\)", "", data$year)
+
+# Variable Summaries and Types
+data$cases <- as.numeric(gsub(",", "", data$cases))
+data$incidence_rate <- as.numeric(data$incidence_rate)
+summary(data)
+```
+
+# Preliminary Results
+
+### Table 1. Number of Observations per Year
+
+```{r, message=FALSE}
+# Create Yearly Summary Variable 
 year_summary <- data |>
   group_by(year) |>
   summarise(observations = n())
 
+# Display Yearly Summary Variable
 colnames(year_summary) <- c("Year", "Number of Observations")
 kable(year_summary,
       align = "cc") |>
@@ -76,9 +106,12 @@ kable(year_summary,
   column_spec(2, width = "6cm")
 ```
 
-### Average Yearly Incidence per 100,000 (All Age Groups)
+This table confirms that there are the same number of observations per year (i.e., that data was collected for each of the five racial/ethnic for each year in the dataset).
 
-```{r}
+### Table 2. Average Yearly Incidence per 100,000 (All Racial/Ethnic Groups)
+
+```{r, message=FALSE}
+# Create Average Yearly Incidence Variable
 average_yearly_incidence <- data |>
   group_by(year) |>
   summarise(
@@ -86,6 +119,7 @@ average_yearly_incidence <- data |>
     sd_rate = sd(incidence_rate, na.rm = TRUE),
     .groups = "drop")
 
+# Display Average Yearly Incidence Variable
 colnames(average_yearly_incidence) <- c("Year", "Average Incidence Rate", "Standard Deviation")
 kable(average_yearly_incidence,
       align = "ccc") |>
@@ -94,17 +128,21 @@ kable(average_yearly_incidence,
   column_spec(2, width = "6cm")
 ```
 
-### Average Incidence per 100,000 by Age Group (All Years)
+This table shows the calculated average incidence rates (per 100,000) and standard deviations for each year (average across all racial/ethnic groups).
 
-```{r}
+### Table 3. Average Incidence per 100,000 by Racial/Ethnic Group (All Years)
+
+```{r, message=FALSE}
+# Create Average Incidence by Racial/Ethnic Group Variable
 average_group_incidence <- data |>
-  group_by(age_group) |>
+  group_by(group) |>
   summarise(
     average_group = mean(incidence_rate, na.rm = TRUE),
     sd_group = sd(incidence_rate, na.rm = TRUE),
     .groups = "drop")
 
-colnames(average_group_incidence) <- c("Age Group", "Average Incidence Rate", "Standard Deviation")
+# Display Average Incidence by Racial/Ethnic Group Variable
+colnames(average_group_incidence) <- c("Racial/Ethnic Group", "Average Incidence Rate", "Standard Deviation")
 kable(average_group_incidence,
       align = "ccc") |>
   kable_styling(latex_options = c("hold_position"), full_width = TRUE) |>
@@ -112,45 +150,153 @@ kable(average_group_incidence,
   column_spec(2, width = "6cm")
 ```
 
-### Lineplot of Yearly Incidence Rates per 100,000 by Age Groups
+This table shows the calculated average incidence rates (per 100,000) and standard deviations for each racial/ethnic group (average across all years, by racial/ethnic group).
 
-```{r}
+### Figure 1a. Lineplot of Yearly Incidence Rates per 100,000 by Racial/Ethnic Group
+
+```{r, fig.width=10}
+# Select Favorite Shades from "Blues" Palette
+favorite_blues <- brewer.pal(9, "Blues")[4:8]
+
+# Plot Yearly Incidence Rates per 100,000 by Racial/Ethnic Group
 ggplot(data = data) +
-  geom_line(mapping = aes(x = year, y = incidence_rate, color = age_group, group = age_group)) +
-  labs(title = "Yearly Incidence Rates per 100,000 by Age Groups",
+  geom_line(mapping = aes(x = year, y = incidence_rate, color = group, group = group), linewidth = 0.75) +
+  labs(title = "Yearly Incidence Rates per 100,000 by Racial/Ethnic Group",
        x = "Year",
        y = "Incidence Rate per 100,000",
-       color = "Age Group") +
-  scale_color_brewer(palette = "RdPu") +
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5))
+       color = "Racial/Ethnic Group") +
+  scale_color_manual(values = favorite_blues) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
-### Lineplot of Average Yearly Incidence per 100,000 (All Age Groups)
+This lineplot demonstrates that the American Indian/Alaska Native (AI/AN) group has consistently had the greatest incidence rates of any racial/ethnic group, with rates nearly double that of the next highest group (White) in 2022. Too, this group's incidence rates have been relatively unstable for the period of interest, peaking at a rate of 3.7 new cases per 100,000 in 2016.
 
-```{r}
+The majority of groups demonstrated a decline in incidence rates in or around 2000. Rates remained low until around 2005, when they began to steadily increase and have continued to do so. The racial/ethnic group with the lowest incidence rates over the period of interest is the Asian/Pacific Islander group.
+
+### Figure 1b. Faceted Lineplots of Yearly Incidence Rates per 100,000 by Racial/Ethnic Group
+
+```{r, fig.width=12, fig.height=12, message=FALSE, }
+# Convert "Year" and "Incidence Rate" into Numeric Variables
+data$year <- as.numeric(data$year)
+data$incidence_rate <- as.numeric(data$incidence_rate)
+
+# Plot Yearly Incidence Rates per 100,000 by Racial/Ethnic Group (Faceted)
+data|> 
+  ggplot() + 
+  geom_line(mapping = aes(x = year, y = incidence_rate, color = group, group = group), linewidth = 1) + 
+  facet_wrap(~ group, nrow = 3) +
+    geom_smooth(mapping = aes(x = year, y = incidence_rate), 
+              method = "loess", color = "grey", se = FALSE, linewidth = 0.5) +
+  labs(
+    x = "Year",
+    y = "Incidence Rate per 100,000",
+    color = "Group:", size = 12) +
+  scale_color_manual(values = favorite_blues) +
+  theme_bw() +
+  theme(
+    legend.position = "bottom",
+    legend.box = "horizontal",
+    legend.margin = margin(t = 8),
+    legend.text = element_text(size = 12))
+```
+
+These lineplots contain the same information as Figure 1a, but display singular groups in each facet of the graph for better observation of individual groups' changes in incidence over the period of interest.
+
+### Figure 2. Lineplot of Average Yearly Incidence per 100,000 (All Racial/Ethnic Groups)
+
+```{r, fig.width=10, message=FALSE}
+# Convert "Year" to a Numeric Variable
+average_yearly_incidence$Year <- as.numeric(average_yearly_incidence$Year)
+
+# Plot Average Yearly Incidence per 100,000 (All Racial/Ethnic Groups)
 ggplot(data = average_yearly_incidence) +
-  geom_line(mapping = aes(x = Year, y = `Average Incidence Rate`), color = "hotpink") +
-  labs(title = "Average Yearly Incidence per 100,000 (All Age Groups)",
+  geom_line(mapping = aes(x = Year, y = `Average Incidence Rate`), color = "slategray2", linewidth = 0.75) +
+    geom_smooth(mapping = aes(x = Year, y = `Average Incidence Rate`), 
+              method = "loess", color = "grey", se = FALSE) +
+  labs(title = "Average Yearly Incidence per 100,000 (All Racial/Ethnic Groups)", 
        x = "Year",
-       y = "Average Incidence per 100,000 (All Age Groups)") +
-  theme_minimal() +
+       y = "Average Incidence per 100,000 (All Racial/Ethnic Groups)") +
+  theme_bw() +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-### Lineplot of Average Incidence per 100,000 by Age Group (All Years)
+This lineplot graphs average incidence rates for all years in the dataset (average of all groups for each year). From this, we can clearly see that following a steep decrease from 2000-2005, general incidence rates for HCV have been steadily increasing.
 
-```{r, fig.width = 10}
-ggplot(average_group_incidence, aes(x = `Age Group`, y = `Average Incidence Rate`, group = 1)) +
-  geom_smooth(method = "loess", se = FALSE, color = "black") +
-  geom_point(size = 3, color = "hotpink", fill = "hotpink") +
-  geom_text(aes(label = `Average Incidence Rate`), 
-            vjust = 0.5,
-            hjust = -0.2,
-            size = 3) +
-  labs(title = "Boxplot of Average Incidence per 100,000 by Age Group (All Years)",
-       x = "Age Group", 
-       y = "Average Incidence per 100,000 by Age Group (All Years)") +
-  theme_minimal()
+### Figure 3. Barchart of Average Incidence per 100,000 by Racial/Ethnic Group (All Years)
+
+```{r, fig.width=10, fig.height=8, message=FALSE}
+# Display Barchart of Average Incidence per 100,000 by Racial/Ethnic Group (All Years)
+ggplot(average_group_incidence, aes(x = `Racial/Ethnic Group`, y = `Average Incidence Rate`, group = 1)) +
+  geom_col(fill = "slategray2", width = 0.5) +
+  geom_text(aes(label = format(`Average Incidence Rate`, nsmall = 2)),
+            vjust = -0.7,
+            size = 3.5) +
+  labs(title = "Barchart of Average Incidence per 100,000 by Racial/Ethnic Group (All Years)",
+       x = "Racial/Ethnic group", 
+       y = "Average Incidence per 100,000 by Racial/Ethnic Group (All Years)") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_text(margin = margin(t = 10)))
 ```
 
+This chart once again demonstrates that the AI/AN group has endured disproportionately higher HCV incidence rates for the period 2000-2022 than all other racial/ethnic groups. The group with the next highest average incidence rate is the White group, with an average less than half that of the AI/AN group.
+
+### Table 4. Percent Change by Racial/Ethnic Group
+
+```{r, message=FALSE}
+# Create Percent Change Variable
+percent_change <- data |>
+  group_by(group)|>
+  summarise(
+    first_rate = first(incidence_rate),
+    last_rate = last(incidence_rate),
+    percent_change = (last_rate - first_rate) / first_rate * 100)
+
+# Display Percent Change Variable
+colnames(percent_change) <- c("Group", "2000 Rate", "2022 Rate", "Percent Change (%)")
+kable(percent_change,
+      align = "ccc") |>
+  kable_styling(latex_options = c("hold_position"), full_width = TRUE) |>
+  column_spec(1, width = "4cm") |>
+  column_spec(2, width = "6cm")
+```
+
+To calculate the percent change in incidence, I took and individual group's 2000 incidence rate and subtracted it from its 2022 rate, dividing this value by the 2000 rate. I then took this value and multiplied it by 100 to express it as a percent.
+
+### Figure 4. Barchart of Percent Change in Incidence by Racial/Ethnic Group
+
+```{r, fig.width=10, fig.height=8, message=FALSE}
+# Display Barchart of Percent Change by Racial/Ethnic Group
+ggplot(percent_change, aes(x = Group, y = `Percent Change (%)`)) +
+  geom_bar(stat = "identity", fill = "slategray2") +
+  geom_text(aes(label = format(`Percent Change (%)`, nsmall = 2)),
+            vjust = -0.7,
+            size = 3.5) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  labs(title = "Barchart of Percent Change in Incidence by Racial/Ethnic Group",
+       x = "Racial/Ethnic Group", 
+       y = "Percent") +
+  theme_light() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_text(margin = margin(t = 10)))
+```
+
+This barchart displays the calculated percent changes for each racial/ethnic group for the period 2000-2022. 
+
+# Conclusion
+
+**The above tables and figures demonstrate that in addition to being burdened by the greatest yearly (Figures 1a, 1b) and average (Table 3, Figure 3) incidence rates for the period of interest, the American Indian/Alaska Native (AI/AN) group has also been burdened by the greatest percent change in incidence from 2000-2022 (Table 4, Figure 4; 314.3%).**
+
+The Asian/Pacific Islander group, although consistently maintaining the lowest incidence rates for the period of interest (Figures 1a, 1b, and 3, Table 3), experienced the second greatest percent change in incidence (Table 4, Figure 4; 200%). 
+
+The Hispanic/Latino and White groups each experienced a percent change of 150% (Table 4, Figure 4). However, the White group has experienced greater yearly and average incidence rates  (Figures 1a, 1b, and 3) relative to the Hispanic/Latino group for the period of interest.
+
+Lastly, the Black/African American group experienced the lowest percent change of the five groups from 2000-2022 (Table 4, Figure 4; 15.4%). However, this group has maintained the third highest yearly and average incidence rates (Figures 1a, 1b, and 3, Table 3) of all five groups.
+
+Research has highlighted engagement in injection drug use (IDU) as the principal risk factor for HCV transmission. The association between this risk factor and HCV transmission has been particularly notable for the nation's AI/AN population. Although limited, ongoing literature partially attributes this disparity to the impact of generational trauma on engagement with high-risk behaviors, like IDU. Settler colonialism, forced assimilation and relocation policies, and ongoing social marginalization and cultural loss have all contributed to lesser health outcomes, like disproportionately higher HCV incidence rates, for this group. Further, historical trauma has led to decreased engagement with and distrust in healthcare, impacting this group’s ability to access appropriate screening and treatment resources.
+
+Additionally, while the “baby boomer” generation (those born between 1946 and 1964, and most likely to have received a blood transfusion before universal screening guidelines) has been identified as a key at-risk population, recent literature has noted an increasing number of new cases being reported in younger individuals. 
+
+For this reason, I plan on incorporating age group data into my final project to investigate this recent trend in incidence. Too, and if data is available, I would like to incorporate geographic data into this data for my final project, as exposure to risk factors like IDU and access to appropriate diagnostic care may vary greatly between urban and rural regions.

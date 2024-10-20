@@ -1,0 +1,171 @@
+---
+title: "PM 566 Midterm"
+author: "Dana Gonzalez"
+format: html
+editor: visual
+embed-resources: TRUE
+theme: cosmo
+---
+
+# Read in CSV File
+
+```{r, results='hide', message=FALSE}
+data <- read.table("~/Downloads/AtlasPlusTableData.csv", header = TRUE, sep = ",")
+```
+
+# Load Libraries
+
+```{r, results='hide', message=FALSE}
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+library(RColorBrewer)
+```
+
+# Introduction
+
+Hepatitis C virus (HCV) infection is the most common bloodborne infection in the United States. In addition to this, national incidence rates for the disease have nearly doubled in the last decade. While the "baby-boomer" generation (those born between 1946 and 1964, and most likely to have received a blood transfusion before universal screening guidelines) has historically been identified as a key at-risk population, an increasing number of new cases have been reported in younger individuals.
+
+In this assignment, I will visualize trends in HCV incidence rate for the age groups included in the dataset, and determine which group(s) have seen the greatest rise in incidence for the time period of interest.
+
+This dataset has 6 variables: "Indicator" ("Acute Viral Hepatitis C" for all observations), "Year", "Age.Group," Cases", "Rate.per.100.000" and "X" (denotes the type of rate, "Incidence Rate" across all observations).
+
+# Methods
+
+My chosen dataset comes from the CDC's National Center for HIV, Viral Hepatitis, STD, and Tuberculosis Prevention (NCHHSTP) site. This center's site provides access to AtlasPlus, an interactive tool that allows users, like myself, to download disease surveillance data from the last 20 years. Using this tool, I downloaded national age-specific incidence rates for Hepatitis C (HCV) from 2000 to 2022.
+
+In cleaning the data, I chose to first remove the "Indicator" and "X" columns, as they were consistent across all observations. I also made sure to check for missing values, although collecting data through AtlasPlus should have not included any of this type of data. Further, I renamed the remaining variables to be more concise and easier to recall in my preliminary analysis. Finally, I gathered summary measures for my dataset's continuous variables using the summary() function, as well as to check that there were no clear issues with my cleaning and wrangling steps.
+
+```{r, results='hide', message=FALSE}
+# Remove "Indicator" and "X" Columns
+library(dplyr)
+data <- data %>%
+  select(-Indicator, -X)
+
+# Check for Missing Data
+missing_data <- colSums(is.na(data))
+missing_data
+
+# Rename Variables
+data <- data |>
+  rename(
+    year = Year,
+    age_group = Age.Group,
+    cases = Cases,
+    incidence_rate = Rate.per.100.000)
+
+# Variable Summaries
+summary(data)
+```
+
+# Preliminary Data
+
+### Table 1. Number of Observations per Year
+
+```{r}
+
+# Create Yearly Summary Variable 
+
+year_summary <- data |>
+  group_by(year) |>
+  summarise(observations = n())
+
+# Display Yearly Summary Variable
+
+colnames(year_summary) <- c("Year", "Number of Observations")
+kable(year_summary,
+      align = "cc") |>
+  kable_styling(latex_options = c("hold_position"), full_width = TRUE) |>
+  column_spec(1, width = "4cm") |>
+  column_spec(2, width = "6cm")
+```
+
+This table confirms that there are the same number of observations per year (i.e., that data was collected for each of the seven age groups for each year in the dataset).
+
+### Table 2. Average Yearly Incidence per 100,000 (All Age Groups)
+
+```{r}
+average_yearly_incidence <- data |>
+  group_by(year) |>
+  summarise(
+    average_rate = mean(incidence_rate, na.rm = TRUE),
+    sd_rate = sd(incidence_rate, na.rm = TRUE),
+    .groups = "drop")
+
+colnames(average_yearly_incidence) <- c("Year", "Average Incidence Rate", "Standard Deviation")
+kable(average_yearly_incidence,
+      align = "ccc") |>
+  kable_styling(latex_options = c("hold_position"), full_width = TRUE) |>
+  column_spec(1, width = "4cm") |>
+  column_spec(2, width = "6cm")
+```
+
+This table shows the calculated average incidence rates (per 100,000) and standard deviations for each year (average across all age groups, per year).
+
+### Table 3. Average Incidence per 100,000 by Age Group (All Years)
+
+```{r}
+average_group_incidence <- data |>
+  group_by(age_group) |>
+  summarise(
+    average_group = mean(incidence_rate, na.rm = TRUE),
+    sd_group = sd(incidence_rate, na.rm = TRUE),
+    .groups = "drop")
+
+colnames(average_group_incidence) <- c("Age Group", "Average Incidence Rate", "Standard Deviation")
+kable(average_group_incidence,
+      align = "ccc") |>
+  kable_styling(latex_options = c("hold_position"), full_width = TRUE) |>
+  column_spec(1, width = "4cm") |>
+  column_spec(2, width = "6cm")
+```
+
+This table shows the calculated average incidence rates (per 100,000) and standard deviations for each age group (average across all years, per age group).
+
+### Figure 1. Lineplot of Yearly Incidence Rates per 100,000 by Age Groups
+
+```{r}
+ggplot(data = data) +
+  geom_line(mapping = aes(x = year, y = incidence_rate, color = age_group, group = age_group)) +
+  labs(title = "Yearly Incidence Rates per 100,000 by Age Groups",
+       x = "Year",
+       y = "Incidence Rate per 100,000",
+       color = "Age Group") +
+  scale_color_brewer(palette = "RdPu") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+This lineplot shows the trends in incidence rates (per 100,000) by age group for the period of 2000 to 2022. We can see that the group with the lowest incidence rates over the period of interest is the 0-14 year-old group (incidence rates close to zero for the entire period). Contrastingly, the group with the highest incidence rates for the same period is the 25-34 year-old group, followed closely by the 35-44 year-old group.
+
+The majority of groups demonstrated a decline in incidence rates in or around 2001. Rates remained low until around 2011, when they began to steadily increase, a trend that has only recently subsided. Since 2021, rates for the majority of groups have began to decrease again. The 35-44 age-group is the only group that has has a consistent and continuous increase in incidence rates since 2011.
+
+### Figure 2. Lineplot of Average Yearly Incidence per 100,000 (All Age Groups)
+
+```{r}
+ggplot(data = average_yearly_incidence) +
+  geom_line(mapping = aes(x = Year, y = `Average Incidence Rate`), color = "hotpink") +
+  labs(title = "Average Yearly Incidence per 100,000 (All Age Groups)",
+       x = "Year",
+       y = "Average Incidence per 100,000 (All Age Groups)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+This figure displays the trend in average incidence rates (per 100,000) for all age groups included in the dataset. From this figure, we can see that the general incidence rate follows the same trend as described above: a steady decline starting in the early 2000s, followed my a period of general stability from this point until the early 2010s, when the rate began to steadily increase. Starting in 2021, this rate began to decrease once again.
+
+### Figure 3. Plot of Average Incidence per 100,000 by Age Group (All Years)
+
+```{r, fig.width = 10}
+ggplot(average_group_incidence, aes(x = `Age Group`, y = `Average Incidence Rate`, group = 1)) +
+  geom_point(size = 6, color = "hotpink", fill = "hotpink") +
+  geom_text(aes(label = `Average Incidence Rate`), 
+            vjust = 0.5,
+            hjust = -0.2,
+            size = 3) +
+  labs(title = "Boxplot of Average Incidence per 100,000 by Age Group (All Years)",
+       x = "Age Group", 
+       y = "Average Incidence per 100,000 by Age Group (All Years)") +
+  theme_minimal()
+```
