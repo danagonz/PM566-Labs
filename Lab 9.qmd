@@ -1,0 +1,119 @@
+---
+title: "Lab 9"
+author: "Dana Gonzalez"
+format: html
+editor: visual
+embed-resources: true
+theme: cosmo
+---
+
+# Load Libraries
+
+```{r, message=FALSE, results='hide'}
+library(microbenchmark)
+library(dplyr)
+library(tidyverse)
+library(parallel)
+```
+
+
+# Problem 1
+
+```{r, message=FALSE, warning = FALSE}
+# Check Number of Cores
+parallel::detectCores()
+
+# "Slow" Version
+fun1 <- function(n = 100, k = 4, lambda = 4) {
+  x <- NULL
+  for (i in 1:n){
+  x <- rbind(x, rpois(k, lambda))}
+  return(x)}
+
+# "Fast" Version
+fun1alt <- function(n = 100, k = 4, lambda = 4) {
+x <- matrix(rpois(n * k, lambda), nrow = n, ncol = k)
+return(x)}
+
+# Check Dimensions of "fun1" and "fun1alt"
+dim(fun1())
+dim(fun1alt())
+
+# Check Distribution of Values of "fun1" and "fun1alt"
+summary(fun1())
+summary(fun1alt())
+
+# Checking Speeds of "fun1" and "fun1alt"
+microbenchmark::microbenchmark(
+  fun1(),
+  fun1alt())
+```
+# Problem 2
+
+```{r, message=FALSE, warning = FALSE}
+# Data Generating Process (10 x 10,000 matrix)
+set.seed(1234)
+x <- matrix(rnorm(1e4), nrow=10)
+
+# Find Each Column's Max Value
+fun2 <- function(x) {
+  apply(x, 2, max)}
+
+fun2alt <- function(x) {
+  apply(x, 2, max)}
+
+max.col(fun2(x))
+max.col(fun2alt(x))
+
+# Check Outputs of "fun2" and "fun2alt"
+results_fun2 <- fun2(x)
+results_fun2alt <- fun2alt(x)
+identical(results_fun2, results_fun2alt)
+
+# Checking Speeds of "fun2" and "fun2alt"
+microbenchmark::microbenchmark(
+  fun1(),
+  fun1alt())
+```
+
+# Problem 3
+
+```{r, message=FALSE, warning = FALSE}
+my_boot <- function(dat, stat, R, ncpus = 1L) {
+
+# Getting the Random Indices
+n <- nrow(dat)
+idx <- matrix(sample.int(n, n * R, TRUE), nrow = n, ncol = R)
+  
+# Parallelization
+ans <- mclapply(seq_len(R), function(i) {
+  result <- stat(dat[idx[, i], , drop = FALSE])
+  return(result)
+}, mc.cores = ncpus)
+
+# Converting the List Into a Matrix
+ans <- do.call(rbind, ans)
+return(ans)
+}
+
+# Check Results by Comparing to a Parametric Model
+my_stat <- function(d) {
+  coef(lm(y ~ x, data = d))
+}
+
+set.seed(1)
+n <- 500; R <- 1e4
+x <- cbind(rnorm(n))
+y <- x*5 + rnorm(n)
+
+ans0 <- confint(lm(y~x))
+ans1 <- my_boot(dat = data.frame(x, y), stat = my_stat, R = R, ncpus = 2L)
+
+summary(ans0)
+summary(ans1)
+
+# Checking Speed
+system.time(my_boot(dat = data.frame(x, y), stat = my_stat, R = R, ncpus = 1L))
+system.time(my_boot(dat = data.frame(x, y), stat = my_stat, R = R, ncpus = 2L))
+```
+
