@@ -1,0 +1,92 @@
+---
+title: "PM 566 Assignment 3"
+author: "Dana Gonzalez"
+format: html
+editor: visual
+embed-resources: true
+theme: cosmo
+---
+
+# Load Libraries
+
+```{r, message=FALSE, warning=FALSE}
+library(dplyr)
+library(tidyverse)
+library(tidytext)
+library(ggplot2)
+```
+
+# Load CSV File
+```{r}
+pubmed <- read.csv("/Users/danagonzalez/Downloads/pubmed.csv")
+```
+
+# Text Mining
+
+### Part 1
+
+```{r}
+# Tokenize Abstracts and Token Counts
+abstract_tokens <- pubmed |>
+  unnest_tokens(word, abstract) |>
+  count(word, sort = TRUE) |>
+  slice_max(n, n = 20)
+
+abstract_tokens |>
+  ggplot(aes(n, word)) +
+  geom_col(fill = "goldenrod") +
+  labs(title = "Top 20 Most Frequent Words from 'Abstract' Column (Including Stopwords)",
+       x = "Count",
+       y = "Word") +
+  theme_minimal()
+
+# Abstract Token Counts without Stopwords
+abstract_tokens2 <- pubmed |>
+  unnest_tokens(word, abstract) |>
+  anti_join(stop_words, by = c("word" = "word")) |>
+  count(word, sort=TRUE) |>
+  slice_max(n, n = 20)
+
+abstract_tokens2 |>
+  ggplot(aes(n, word)) +
+  geom_col(fill = "goldenrod") +
+  labs(title = "Top 20 Most Frequent Words from 'Abstract' Column (Without Stopwords)",
+       x = "Count",
+       y = "Word") +
+  theme_minimal()
+
+# Tokenize Search Term and Token Counts without Stopwords
+term_tokens <- pubmed |>
+  unnest_tokens(word, term) |>
+  anti_join(stop_words, by = c("word" = "word")) |>
+  count(word, sort = TRUE) |>
+  slice_max(n, n = 5)
+
+term_tokens |>
+  ggplot(aes(n, word)) +
+  geom_col(fill = "goldenrod") +
+  labs(title = "Top 5 Most Frequent Words from 'Term' Column (Without Stopwords)",
+       x = "Count",
+       y = "Word") +
+  theme_minimal()
+```
+
+### Part 2 
+
+```{r}
+# Tokenize Abstract into Bigrams
+abstract_bigrams <- pubmed|>
+  unnest_ngrams(ngram, abstract, n = 2) |>
+  count(ngram, sort = TRUE) |>
+  slice_max(n, n = 10)
+
+abstract_bigrams |>
+  ggplot(aes(n, ngram)) +
+  geom_col(fill = "goldenrod") +
+  labs(title = "Top 10 Most Frequent Bi-Grams from 'Abstract' Column",
+       x = "Count",
+       y = "Bi-Gram") +
+  theme_minimal()
+
+```
+
