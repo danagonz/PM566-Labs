@@ -29,20 +29,20 @@ Hepatitis C virus (HCV) infection is the most common blood-borne infection in th
 
 **In this assignment, I will visualize trends in HCV incidence rate for the racial/ethnic groups included in my chosen dataset, and determine which group(s) have seen the greatest rise in incidence for the time period of interest by calculating the percent change in incidence from 2000 to 2022**.
 
-This dataset includes the following five variables: 
+This dataset includes the following five variables:
 
-- "Indicator" ("Acute Viral Hepatitis C" for all observations)
-- "Year" (2000-2022)
-- "Race.Ethnicity"
-  - "American Indian/Alaska Native"
-  - "Asian/Pacific Islander"
-  - "Black/African American"
-  - "Hispanic/Latino"
-  - "White"
-  - "Other"
-  - "Unknown"
-- "Cases" (crude case counts)
-- "Rate.per.100.000" (incidence rate)
+-   "Indicator" ("Acute Viral Hepatitis C" for all observations)
+-   "Year" (2000-2022)
+-   "Race.Ethnicity"
+    -   "American Indian/Alaska Native"
+    -   "Asian/Pacific Islander"
+    -   "Black/African American"
+    -   "Hispanic/Latino"
+    -   "White"
+    -   "Other"
+    -   "Unknown"
+-   "Cases" (crude case counts)
+-   "Rate.per.100.000" (incidence rate)
 
 # Methods
 
@@ -50,19 +50,19 @@ My chosen dataset comes from the CDC's National Center for HIV, Viral Hepatitis,
 
 In cleaning the data, I chose to first remove the "Indicator" column, as it was consistent for all observations. Further, I noticed upon reviewing my dataset that there was no data available for the "Other" and "Unknown" racial/ethnic groups, so I chose to exclude them from my analysis and only focus on the remaining groups with data. Next, I renamed the remaining variables to be more concise and easier to recall throughout this assignment.
 
-Finally, I gathered summary measures for my dataset's continuous variables using the summary() function. In doing this step, I realized my case and incidence rate variables were being treated as characters, so I changed them to a numeric class (making sure to remove commas to avoid introducing NAs by coercion). 
+Finally, I gathered summary measures for my dataset's continuous variables using the summary() function. In doing this step, I realized my case and incidence rate variables were being treated as characters, so I changed them to a numeric class (making sure to remove commas to avoid introducing NAs by coercion).
 
 The summary statistics for the "case" variable included (by group):
 
-- Median yearly case count: 67.0
-- Minimum yearly case count: 3.0
-- Maximum yearly case count: 3097.0
+-   Median yearly case count: 67.0
+-   Minimum yearly case count: 3.0
+-   Maximum yearly case count: 3097.0
 
 The summary statistics for the "incidence_rate" variable included (by group):
 
-- Median incidence rate per 100,000: 0.30
-- Minimum incidence rate per 100,000: 0.0
-- Maximum incidence rate per 100,000: 3.7
+-   Median incidence rate per 100,000: 0.30
+-   Minimum incidence rate per 100,000: 0.0
+-   Maximum incidence rate per 100,000: 3.7
 
 ```{r, results='hide', message=FALSE}
 # Remove "Indicator" Column
@@ -283,20 +283,20 @@ ggplot(percent_change, aes(x = Group, y = `Percent Change (%)`)) +
         axis.title.x = element_text(margin = margin(t = 10)))
 ```
 
-This barchart displays the calculated percent changes for each racial/ethnic group for the period 2000-2022. 
+This barchart displays the calculated percent changes for each racial/ethnic group for the period 2000-2022.
 
 # Conclusion
 
 **The above tables and figures demonstrate that in addition to being burdened by the greatest yearly (Figures 1a, 1b) and average (Table 3, Figure 3) incidence rates for the period of interest, the American Indian/Alaska Native (AI/AN) group has also been burdened by the greatest percent change in incidence from 2000-2022 (Table 4, Figure 4; 314.3%).**
 
-The Asian/Pacific Islander group, although consistently maintaining the lowest incidence rates for the period of interest (Figures 1a, 1b, and 3, Table 3), experienced the second greatest percent change in incidence (Table 4, Figure 4; 200%). 
+The Asian/Pacific Islander group, although consistently maintaining the lowest incidence rates for the period of interest (Figures 1a, 1b, and 3, Table 3), experienced the second greatest percent change in incidence (Table 4, Figure 4; 200%).
 
-The Hispanic/Latino and White groups each experienced a percent change of 150% (Table 4, Figure 4). However, the White group has experienced greater yearly and average incidence rates  (Figures 1a, 1b, and 3) relative to the Hispanic/Latino group for the period of interest.
+The Hispanic/Latino and White groups each experienced a percent change of 150% (Table 4, Figure 4). However, the White group has experienced greater yearly and average incidence rates (Figures 1a, 1b, and 3) relative to the Hispanic/Latino group for the period of interest.
 
 Lastly, the Black/African American group experienced the lowest percent change of the five groups from 2000-2022 (Table 4, Figure 4; 15.4%). However, this group has maintained the third highest yearly and average incidence rates (Figures 1a, 1b, and 3, Table 3) of all five groups.
 
 Research has highlighted engagement in injection drug use (IDU) as the principal risk factor for HCV transmission. The association between this risk factor and HCV transmission has been particularly notable for the nation's AI/AN population. Although limited, ongoing literature partially attributes this disparity to the impact of generational trauma on engagement with high-risk behaviors, like IDU. Settler colonialism, forced assimilation and relocation policies, and ongoing social marginalization and cultural loss have all contributed to lesser health outcomes, like disproportionately higher HCV incidence rates, for this group. Further, historical trauma has led to decreased engagement with and distrust in healthcare, impacting this group’s ability to access appropriate screening and treatment resources.
 
-Additionally, while the “baby boomer” generation (those born between 1946 and 1964, and most likely to have received a blood transfusion before universal screening guidelines) has been identified as a key at-risk population, recent literature has noted an increasing number of new cases being reported in younger individuals. 
+Additionally, while the “baby boomer” generation (those born between 1946 and 1964, and most likely to have received a blood transfusion before universal screening guidelines) has been identified as a key at-risk population, recent literature has noted an increasing number of new cases being reported in younger individuals.
 
 For this reason, I plan on incorporating age group data into my final project to investigate this recent trend in incidence. Too, and if data is available, I would like to incorporate geographic data into this data for my final project, as exposure to risk factors like IDU and access to appropriate diagnostic care may vary greatly between urban and rural regions.

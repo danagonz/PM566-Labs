@@ -14,6 +14,8 @@ library(dplyr)
 library(tidyverse)
 library(tidytext)
 library(ggplot2)
+library(textdata)
+library(DT)
 ```
 
 # Load CSV File
@@ -34,11 +36,12 @@ abstract_tokens <- pubmed |>
 
 abstract_tokens |>
   ggplot(aes(n, word)) +
-  geom_col(fill = "goldenrod") +
+  geom_col(fill = "slategray2") +
   labs(title = "Top 20 Most Frequent Words from 'Abstract' Column (Including Stopwords)",
        x = "Count",
        y = "Word") +
-  theme_minimal()
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
 
 # Abstract Token Counts without Stopwords
 abstract_tokens2 <- pubmed |>
@@ -49,11 +52,12 @@ abstract_tokens2 <- pubmed |>
 
 abstract_tokens2 |>
   ggplot(aes(n, word)) +
-  geom_col(fill = "goldenrod") +
+  geom_col(fill = "slategray2") +
   labs(title = "Top 20 Most Frequent Words from 'Abstract' Column (Without Stopwords)",
        x = "Count",
        y = "Word") +
-  theme_minimal()
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
 
 # Tokenize Search Term and Token Counts without Stopwords
 term_tokens <- pubmed |>
@@ -64,11 +68,12 @@ term_tokens <- pubmed |>
 
 term_tokens |>
   ggplot(aes(n, word)) +
-  geom_col(fill = "goldenrod") +
+  geom_col(fill = "slategray2") +
   labs(title = "Top 5 Most Frequent Words from 'Term' Column (Without Stopwords)",
        x = "Count",
        y = "Word") +
-  theme_minimal()
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 ### Part 2 
@@ -82,11 +87,112 @@ abstract_bigrams <- pubmed|>
 
 abstract_bigrams |>
   ggplot(aes(n, ngram)) +
-  geom_col(fill = "goldenrod") +
+  geom_col(fill = "slategray2") +
   labs(title = "Top 10 Most Frequent Bi-Grams from 'Abstract' Column",
        x = "Count",
        y = "Bi-Gram") +
-  theme_minimal()
-
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
+### Part 3
+
+```{r}
+# Calculate TF-IDF Values
+pubmed_tfidf <- pubmed |> 
+  unnest_tokens(abstract, abstract) |> 
+  count(abstract, term) |> 
+  bind_tf_idf(abstract, term, n) |> 
+  arrange(desc(tf_idf))
+
+# Determine Top 5 Tokens with Highest TF-IDF Values
+top_5_tfidf <- pubmed_tfidf |>
+  arrange(desc(tf_idf))|>
+  slice_head(n = 5) |>           
+  ungroup()
+
+top_5_tfidf
+```
+
+There are significant differences in the top five tokens between part one and part three. Part one returns the following terms (in order): prostate, preeclampsia, fibrosis/cystic (tie), covid, and cancer. Part three returns the following terms (again, in order): covid, prostate cancer, preeclampsia, preeclampsia (again), and meningitis. While there are some commonalities between the two methods (i.e., with "covid", although they are not in the same order), part three groups "prostate cancer" into one term rather than two (as it is in part one). Too, part three counts preeclampsia twice.
+
+# Sentiment Analysis
+
+### Part 1
+
+```{r, warning=FALSE}
+# Perform Sentiment Analysis with NRC Lexicon
+nrc_lexicon <- get_sentiments("nrc")
+pubmed_sent <- pubmed |>
+  unnest_tokens(word, abstract) |>
+  inner_join(nrc_lexicon, by = "word", relationship = "many-to-many")
+
+datatable(pubmed_sent, 
+          class = 'cell-border stripe',
+          options = list(pageLength = 10,         
+                         lengthMenu = c(5, 10, 20, 50), 
+                         searching = TRUE,      
+                         ordering = TRUE))
+
+# Determine Most Common Sentiment Per Search Term
+common_sent <- pubmed_sent |>
+  group_by(term, sentiment) |>
+  summarise(count = n(), .groups = 'drop') |>
+  distinct(term, sentiment, count) |>
+  group_by(term) |>
+  slice_max(count, n = 1) |>
+  ungroup()
+
+common_sent
+
+# Determine Most Common Sentiment Per Search Term After Removing "Positive" and "Negative"
+no_pos_neg <- pubmed_sent |>
+  filter(!sentiment %in% c("positive", "negative")) |>
+  group_by(term) |>
+  count(sentiment) |>
+  arrange(desc(n)) |>
+  slice(1) |>
+  ungroup()
+
+no_pos_neg
+```
+
+### Part 2
+
+```{r, warning=FALSE}
+# Obtain Average Postivity Scores for Abstracts Using AFINN Lexicon
+afinn_lexicon <- get_sentiments("afinn")
+pubmed_sent_afinn <- pubmed |>
+  mutate(abstract_no = row_number()) |>
+  unnest_tokens(word, abstract) |>
+  inner_join(afinn_lexicon, by = "word")
+
+pos_scores <- pubmed_sent_afinn |>
+  group_by(abstract_no) |>
+  summarize(avg_score = mean(value, na.rm = TRUE)) |>
+  ungroup()
+
+datatable(pos_scores, 
+          class = 'cell-border stripe',
+          options = list(pageLength = 10,         
+                         lengthMenu = c(5, 10, 20, 50), 
+                         searching = TRUE,      
+                         ordering = TRUE))
+
+# Visualize Score by Term
+scores_by_term <- pubmed |>
+  mutate(abstract_no = row_number()) |>
+  left_join(pos_scores, by = "abstract_no")
+
+ggplot(scores_by_term, aes(x = term, y = avg_score)) +
+  geom_boxplot(fill = "slategray2") +
+  labs(
+    title = "Average Positivity Scores by Search Term",
+    x = "Search Term",
+    y = "Average Positivity Score"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+The term with the highest average positivity score is "cystic fibrosis", with a mean value of approximately 0.5. The distinction between the term with the lowest average positivity score is less clear, with the terms "covid", "meningitis", and "prostate cancer" each having a mean score at approximately -0.1. Of the five unique terms, "cystic fibrosis" is the only term with a positive mean value.
