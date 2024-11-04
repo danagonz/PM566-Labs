@@ -1,0 +1,277 @@
+---
+title: "PM 566 Lab 10"
+author: "Dana Gonzalez"
+format: html
+editor: visual
+embed-resources: true
+theme: cosmo
+---
+# Setup
+
+```{r, results='hide'}
+# Install and Load Libraries
+library(RSQLite)
+library(DBI)
+library(DT)
+library(dplyr)
+library(tidyverse)
+
+# Initialize a Temporary in Memory Database
+con <- dbConnect(SQLite(), ":memory:")
+
+# Download Tables
+actor <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/actor.csv")
+rental <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/rental.csv")
+customer <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/customer.csv")
+payment <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/payment_p2007_01.csv")
+
+# Copy data.frames to Database
+dbWriteTable(con, "actor", actor)
+dbWriteTable(con, "rental", rental)
+dbWriteTable(con, "customer", customer)
+dbWriteTable(con, "payment", payment)
+```
+
+# Exercise 1
+
+```{r}
+# Order Actor Names by Last, Then First Names
+query <-
+"SELECT actor_id, first_name, last_name
+FROM actor
+ORDER BY last_name, first_name"
+
+first_last <- dbGetQuery(con, query)
+
+datatable(first_last, 
+          class = 'cell-border stripe',
+          options = list(pageLength = 10,         
+                         lengthMenu = c(5, 10, 20, 50), 
+                         searching = TRUE,      
+                         ordering = TRUE))
+```
+
+# Excercise 2
+
+```{r}
+# Retrieve the ID, First, and Last Names for Actors Whose Last Name Equals ‘WILLIAMS’ or ‘DAVIS’
+query2 <-
+"SELECT actor_id, first_name, last_name
+FROM actor
+WHERE last_name IN ('WILLIAMS', 'DAVIS')"
+
+williams_davis <- dbGetQuery(con, query2)
+
+williams_davis
+```
+
+# Excercise 3
+
+```{r}
+# Select ID's For Customers Who Rented a Film on July 5, 2005
+query3 <-
+"SELECT DISTINCT customer_id
+FROM rental
+WHERE DATE(rental_date) = '2005-07-05'"
+
+july_rental <- dbGetQuery(con, query3)
+
+july_rental
+```
+
+# Exercise 4
+
+### Excercise 4.1
+
+```{r}
+# Retrieve Rows From Payment Table Where Values Equal 1.99, 7.99, or 9.99
+query4 <-
+"SELECT payment_id, customer_id, staff_id, rental_id, amount, payment_date
+FROM payment
+WHERE amount IN (1.99, 7.99, 9.99)"
+
+payments <- dbGetQuery(con, query4)
+
+datatable(payments, 
+          class = 'cell-border stripe',
+          options = list(pageLength = 10,         
+                         lengthMenu = c(5, 10, 20, 50), 
+                         searching = TRUE,      
+                         ordering = TRUE))
+```
+
+### Excercise 4.2
+
+```{r}
+# Retrieve Rows From Payment Table Where Values Are Greater Than 5
+query5 <-
+"SELECT payment_id, customer_id, staff_id, rental_id, amount, payment_date
+FROM payment
+WHERE amount > 5"
+
+payments2 <- dbGetQuery(con, query5)
+
+datatable(payments2, 
+          class = 'cell-border stripe',
+          options = list(pageLength = 10,         
+                         lengthMenu = c(5, 10, 20, 50), 
+                         searching = TRUE,      
+                         ordering = TRUE))
+```
+
+# Exercise 5
+
+```{r}
+# Retrieve Payment IDs and Amounts From Customers Whose Last Name is ‘DAVIS’
+query6 <-
+"SELECT payment_id, amount
+FROM customer
+  INNER JOIN payment ON customer.customer_id = payment.customer_id
+WHERE last_name = 'DAVIS'"
+
+davis <- dbGetQuery(con, query6)
+
+davis
+```
+
+# Exercise 6
+
+### Excercise 6.1
+
+```{r}
+# Count Number of Rows in Rental Table
+query7 <-
+"SELECT COUNT(*) row
+FROM rental"
+
+row_count <- dbGetQuery(con, query7)
+
+row_count
+```
+
+### Excercise 6.2
+
+```{r}
+# Count Number of Rentals for Each Customer
+query8 <-
+"SELECT customer_id,
+COUNT (*) as count
+FROM rental
+GROUP BY customer_id"
+
+rentals_per_customer <- dbGetQuery(con, query8)
+
+datatable(rentals_per_customer, 
+          class = 'cell-border stripe',
+          options = list(pageLength = 10,         
+                         lengthMenu = c(5, 10, 20, 50), 
+                         searching = TRUE,      
+                         ordering = TRUE))
+```
+
+### Excercise 6.3
+
+```{r}
+# Count Number of Rentals for Each Customer in Descending Order
+query9 <-
+"SELECT customer_id,
+COUNT (*) as count
+FROM rental
+GROUP BY customer_id
+ORDER BY count DESC"
+
+rentals_descending <- dbGetQuery(con, query9)
+
+datatable(rentals_descending, 
+          class = 'cell-border stripe',
+          options = list(pageLength = 10,         
+                         lengthMenu = c(5, 10, 20, 50), 
+                         searching = TRUE,      
+                         ordering = TRUE))
+```
+
+### Excercise 6.4
+
+```{r}
+# Count Number of Rentals for Each Customer With At Least 40 Rentals
+query10 <-
+"SELECT customer_id,
+COUNT (*) as count
+FROM rental
+GROUP BY customer_id
+HAVING COUNT(*) >= 40
+ORDER BY count DESC"
+
+rentals_40 <- dbGetQuery(con, query10)
+
+rentals_40
+```
+
+# Excercise 7
+
+### Excercise 7.1
+
+```{r}
+# Summary Statistics for Payment Table
+query11 <- 
+"SELECT 
+    MAX(amount) AS max_payment,
+    MIN(amount) AS min_payment,
+    AVG(amount) AS avg_payment,
+    SUM(amount) AS total_payment
+FROM payment"
+
+payment_summary <- dbGetQuery(con, query11)
+
+payment_summary
+```
+
+### Excercise 7.2
+
+```{r}
+# Summary Statistics for Payment Table by Customer
+query12 <- 
+"SELECT customer_id,
+    MAX(amount) AS max_payment,
+    MIN(amount) AS min_payment,
+    AVG(amount) AS avg_payment,
+    SUM(amount) AS total_payment
+FROM payment
+GROUP BY customer_id"
+
+summary_customer <- dbGetQuery(con, query12)
+
+datatable(summary_customer, 
+          class = 'cell-border stripe',
+          options = list(pageLength = 10,         
+                         lengthMenu = c(5, 10, 20, 50), 
+                         searching = TRUE,      
+                         ordering = TRUE))
+```
+
+### Excercise 7.3
+
+```{r}
+# Summary Statistics for Payment Table by Customers with More Than 5 Payments
+query13 <- 
+"SELECT customer_id,
+    MAX(amount) AS max_payment,
+    MIN(amount) AS min_payment,
+    AVG(amount) AS avg_payment,
+    SUM(amount) AS total_payment
+FROM payment
+GROUP BY customer_id
+HAVING COUNT(payment_id) > 5"
+
+summary_customer_5 <- dbGetQuery(con, query13)
+
+summary_customer_5
+```
+
+# Cleanup
+
+```{r}
+# Cleanup!
+dbDisconnect(con)
+```
+
