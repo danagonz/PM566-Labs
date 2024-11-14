@@ -1,0 +1,360 @@
+---
+title: "PM 566 Lab 11"
+author: "Dana Gonzalez"
+format: html
+editor: visual
+embed-resources: true
+theme: cosmo
+---
+
+# Part 1
+
+## Step 1
+
+```{r, message=FALSE}
+# Load Libraries
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(tidyr)
+
+# Read-in and Merge NYT Data
+cov_states <- as.data.frame(read.csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"))
+
+state_pops <- as.data.frame(read.csv("https://raw.githubusercontent.com/COVID19Tracking/associated-data/master/us_census_data/us_census_2018_population_estimates_states.csv"))
+state_pops$abb <- state_pops$state
+state_pops$state <- state_pops$state_name
+state_pops$state_name <- NULL
+
+cov_states <- merge(cov_states, state_pops, by="state")
+```
+
+## Step 2
+
+```{r}
+# Inspect Data
+dim(cov_states)
+head(cov_states)
+tail(cov_states)
+str(cov_states)
+```
+
+## Step 3
+
+```{r}
+# Format Data
+
+# Format Date Variable
+cov_states$date <- as.Date(cov_states$date, format="%Y-%m-%d")
+
+#Format State and Abbreviation Variables
+state_list <- unique(cov_states$state)
+cov_states$state <- factor(cov_states$state, levels = state_list)
+abb_list <- unique(cov_states$abb)
+cov_states$abb <- factor(cov_states$abb, levels = abb_list)
+
+# Sort by State and Date Variables
+cov_states = cov_states[order(cov_states$state, cov_states$date),]
+
+# Re-Inspect Data
+str(cov_states)
+head(cov_states)
+tail(cov_states)
+
+# Inspect Ranges
+min(cov_states$date)
+max(cov_states$date)
+min(cov_states$cases)
+max(cov_states$cases)
+
+
+```
+The range of dates for this data set is between January 21st, 2020 (01/21/2020) and March 23rd, 2023 (03/23/2023). The minimum number of cases observed is 1, whereas the maximum is 12,169,158.
+
+## Step 4
+
+```{r}
+# Add "new_cases" and "new_deaths" and Correct Outliers
+
+### Add New Variables
+for (i in 1:length(state_list)) {
+  cov_subset <- subset(cov_states, state == state_list[i])
+  cov_subset <- cov_subset[order(cov_subset$date), ]
+  
+  cov_subset$new_cases <- c(0, diff(cov_subset$cases))
+  cov_subset$new_deaths <- c(0, diff(cov_subset$deaths))
+  
+  for (j in 2:nrow(cov_subset)) {
+    cov_subset$new_cases[j] = cov_subset$cases[j] - cov_subset$cases[j - 1]
+    cov_subset$new_deaths[j] = cov_subset$deaths[j] - cov_subset$deaths[j - 1]}
+
+  cov_states$new_cases[cov_states$state == state_list[i]] <- cov_subset$new_cases
+  cov_states$new_deaths[cov_states$state == state_list[i]] <- cov_subset$new_deaths}
+
+### Focus on Recent Dates
+cov_states <- cov_states |> dplyr::filter(date >= "2021-06-01")
+
+### Inspect Outliers
+p1<-ggplot(cov_states, aes(x = date, 
+                          y = new_cases, 
+                          color = state)) + 
+  geom_line() + 
+  geom_point(size = .5, alpha = 0.5)
+
+ggplotly(p1)
+
+p1<-NULL
+
+p2<-ggplot(cov_states, aes(x = date, 
+                          y = new_deaths, 
+                          color = state)) + 
+  geom_line() + 
+  geom_point(size = .5, alpha = 0.5)
+
+ggplotly(p2)
+
+p2<-NULL
+
+### Set Negative New Case or Death Counts to 0
+cov_states$new_cases[cov_states$new_cases < 0 | is.na(cov_states$new_cases)] = 0
+cov_states$new_deaths[cov_states$new_deaths < 0 | is.na(cov_states$new_deaths)] = 0
+
+### Recalculate `cases` and `deaths` as Cumulative Sum of Updated `new_cases` and `new_deaths`
+for (i in 1:length(state_list)) {
+  cov_subset = subset(cov_states, state == state_list[i])
+  
+  #### Add Starting Level
+  cov_subset$cases = cov_subset$cases[1]
+  cov_subset$deaths = cov_subset$deaths[1]}
+  
+for (j in 2:nrow(cov_subset)) {
+  cov_subset$cases[j] = cov_subset$new_cases[j] + cov_subset$cases[j-1]
+  cov_subset$deaths[j] = cov_subset$new_deaths[j] + cov_subset$deaths[j-1]
+  
+  #### Include in Main Dataset
+  cov_states$cases[cov_states$state==state_list[i]] = cov_subset$cases
+  cov_states$deaths[cov_states$state==state_list[i]] = cov_subset$deaths}
+
+### Smooth New Counts
+cov_states <- cov_states |>
+  mutate(
+    new_cases = zoo::rollmean(new_cases, k = 7, fill = NA, align = 'right') |> round(digits = 0),
+    new_deaths = zoo::rollmean(new_deaths, k = 7, fill = NA, align = 'right') |> round(digits = 0))
+
+
+### Inspect Data Again (Interactively)
+p2 <- ggplot(cov_states, aes(x = date, 
+                             y = new_deaths, 
+                             color = state)) + 
+  geom_line() + 
+  geom_point(size = .5, alpha = 0.5)
+
+ggplotly(p2)
+
+p2<-NULL
+```
+
+## Step 5
+
+```{r, warning=FALSE}
+### Add Population Normalized (by 100,000) Counts for Each Variable
+cov_states$per100k = ifelse(cov_states$cases == 0, 0, round(cov_states$cases / (cov_states$population / 100000), 1))
+cov_states$newper100k = ifelse(cov_states$new_cases == 0, 0, round(cov_states$new_cases / (cov_states$population / 100000), 1))
+cov_states$deathsper100k = ifelse(cov_states$deaths == 0, 0, round(cov_states$deaths / (cov_states$population / 100000), 1))
+cov_states$newdeathsper100k = ifelse(cov_states$new_deaths == 0, 0, round(cov_states$new_deaths / (cov_states$population / 100000), 1))
+
+### Add Naive_CFR Variable = Deaths / Cases
+cov_states = cov_states |> mutate(naive_CFR = round((deaths*100/cases),2))
+
+### Create `cv_states_today` Variable
+cov_states_today = subset(cov_states, date==max(cov_states$date))
+```
+
+# Part 2
+
+## Step 6
+
+```{r, warning=FALSE}
+# Population Density versus Cases
+cov_states_today |> 
+  plot_ly(x = ~pop_density, y = ~cases, 
+          type = 'scatter', mode = 'markers', color = ~state,
+          size = ~population, sizes = c(5, 70), marker = list(sizemode='diameter', opacity=0.5))
+
+# Filter out "District of Columbia"
+cov_states_today_filter <- cov_states_today |> filter(state!="District of Columbia")
+
+# Population Density versus Cases After Filtering
+cov_states_today_filter |> 
+  plot_ly(x = ~pop_density, y = ~cases, 
+          type = 'scatter', mode = 'markers', color = ~state,
+          size = ~population, sizes = c(5, 70), marker = list(sizemode='diameter', opacity=0.5))
+
+# Population Density versus Deaths per 100k
+cov_states_today_filter |>
+  plot_ly(x = ~pop_density, y = ~deathsper100k,
+          type = 'scatter', mode = 'markers', color = ~state,
+          size = ~population, sizes = c(5, 70), marker = list(sizemode='diameter', opacity=0.5))
+
+# Adding Hover Info
+cov_states_today_filter |> 
+  plot_ly(x = ~pop_density, y = ~deathsper100k,
+          type = 'scatter', mode = 'markers', color = ~state,
+          size = ~population, sizes = c(5, 70), marker = list(sizemode='diameter', opacity=0.5),
+          hoverinfo = 'text',
+          text = ~paste( paste(state, ":", sep=""), paste(" Cases per 100k: ", per100k, sep="") , 
+                         paste(" Deaths per 100k: ", deathsper100k, sep=""), sep = "<br>")) |>
+  layout(title = "Population-normalized COVID-19 Deaths (per 100k) vs. Population Density for US States",
+                  yaxis = list(title = "Deaths per 100k"), xaxis = list(title = "Population Density"),
+         hovermode = "compare")
+```
+
+## Step 7
+
+```{r}
+p <- ggplot(cov_states_today_filter, aes(x=pop_density, y=newdeathsper100k, size=population)) + 
+  geom_point() + 
+  geom_smooth() +
+  labs(title="New COVID-19 Deaths (per 100k) vs. Population Density", x="Population Density", y="Deaths per 100k")
+ggplotly(p)
+```
+
+There does not seem to be a particularly strong correlation between COVID-19 deaths per 100,000 and population density. Looking at this figure, we can see that for increases in population density between ~100 and ~240, there is a decline in deaths, as with population density between ~750 and ~1250. For all other regions, there does not seem to be a clear relationship between the two variables.
+
+## Step 8
+
+```{r, warning=FALSE}
+# Line Chart for naive_CFR for All States Over Time Using `plot_ly()`
+plot_ly(cov_states, x = ~date, y = ~naive_CFR, color = ~state, type = "scatter", mode = "lines")
+
+# Linechart for Florida Showing new_cases and new_deaths Together
+cov_states |> filter(state=="Florida") |> plot_ly(x = ~date, y = ~new_cases, type = "scatter", mode = "lines", name = "New Cases") |> add_trace(x = ~date, y = ~new_deaths, type = "scatter", mode = "lines", name = "New Deaths") 
+```
+Naive CFR for the majority of states steadily increased from July 2021 to January 2022, where they saw the largest decrease until approximately February of the same year. After this point, most states saw a slight increase in naive CFR followed by a steady plateau. The states that did not follow this broad trend were Alaska and Utah, in which there was larger increase prior to the January-Februaru 2022 drop.
+
+The peak in new cases was January 10, 2022 with 84.669k new cases. The peak for new deaths was September 20, 2021 with 445 new deaths. The time between these two dates is approximately 112 days.
+
+## Step 9
+
+```{r}
+# Map State, Date, and New Cases to a Matrix
+cov_states_mat <- cov_states |> select(state, date, cases) |> dplyr::filter(date>as.Date("2021-06-01"))
+cov_states_mat2 <- as.data.frame(pivot_wider(cov_states_mat, names_from = state, values_from = cases))
+rownames(cov_states_mat2) <- cov_states_mat2$date
+cov_states_mat2$date <- NULL
+cov_states_mat2 <- as.matrix(cov_states_mat2)
+
+# Create Heatmap Using plot_ly()
+plot_ly(x=colnames(cov_states_mat2), 
+        y=rownames(cov_states_mat2),
+        z=cov_states_mat2,
+        type="heatmap",
+        showscale=T)
+
+# Repeat with New Cases Per 100k
+cov_states_mat <- cov_states |> select(state, date, newper100k) |> dplyr::filter(date>as.Date("2021-06-01"))
+cov_states_mat2 <- as.data.frame(pivot_wider(cov_states_mat, names_from = state, values_from = newper100k))
+rownames(cov_states_mat2) <- cov_states_mat2$date
+cov_states_mat2$date <- NULL
+cov_states_mat2 <- as.matrix(cov_states_mat2)
+
+# Create Heatmap Using plot_ly()
+plot_ly(x=colnames(cov_states_mat2), 
+        y=rownames(cov_states_mat2),
+        z=~cov_states_mat2,
+        type="heatmap",
+        showscale=T)
+
+# Create a Second Heatmap after Filtering to Only Include Dates Every Other Week
+filter_dates <- seq(as.Date("2021-06-15"), as.Date("2021-11-01"), by='2 weeks')
+
+cov_states_mat <- cov_states |> select(state, date, newper100k) |> dplyr::filter((date %in% filter_dates))
+cov_states_mat2 <- as.data.frame(pivot_wider(cov_states_mat, names_from = state, values_from = newper100k))
+rownames(cov_states_mat2) <- cov_states_mat2$date
+cov_states_mat2$date <- NULL
+cov_states_mat2 <- as.matrix(cov_states_mat2)
+
+# Create a Heatmap Using plot_ly()
+plot_ly(x=colnames(cov_states_mat2), y=rownames(cov_states_mat2),
+             z=cov_states_mat2,
+             type="heatmap",
+             showscale=T)
+```
+
+The states that stand out with the first heatmap are California, Florida, New York, and Texas. Distinction is the 100k heatmap are much less distinct. There is, however, a clear "band" of greater density in mid-January 2022 for all states.
+
+## Step 10
+
+```{r}
+# Specified Date
+
+pick.date = "2021-10-15"
+
+# Extract Data for Each State by its Abbreviation
+cov_per100 <- cov_states |> filter(date==pick.date) |> select(state, abb, newper100k, cases, deaths)
+cov_per100$state_name <- cov_per100$state
+cov_per100$state <- cov_per100$abb
+cov_per100$abb <- NULL
+
+# Create Hover Text
+cov_per100$hover <- with(cov_per100, paste(state_name, '<br>', "Cases per 100k: ", newper100k, '<br>', "Cases: ", cases, '<br>', "Deaths: ", deaths))
+
+# Set Up Mapping Details
+set_map_details <- list(
+  scope = 'usa',
+  projection = list(type = 'albers usa'),
+  showlakes = TRUE,
+  lakecolor = toRGB('white'))
+
+# Make Sure Both Maps Are On the Same Color Scale
+shadeLimit <- 125
+
+# Create Map
+fig <- plot_geo(cov_per100, locationmode = 'USA-states') |> 
+  add_trace(
+    z = ~newper100k, text = ~hover, locations = ~state,
+    color = ~newper100k, colors = 'Blues')
+fig <- fig |> colorbar(title = paste0("Cases per 100k: ", pick.date), limits = c(0,shadeLimit))
+fig <- fig |> layout(
+    title = paste('Cases per 100k by State as of ', pick.date, '<br>(Hover for value)'),
+    geo = set_map_details)
+fig_pick.date <- fig
+
+# Map for Today's Date
+
+# Extract Data for Each State by its Abbreviation
+cov_per100 <- cov_states_today |>  select(state, abb, newper100k, cases, deaths)
+cov_per100$state_name <- cov_per100$state
+cov_per100$state <- cov_per100$abb
+cov_per100$abb <- NULL
+
+# Create Hover Text
+cov_per100$hover <- with(cov_per100, paste(state_name, '<br>', "Cases per 100k: ", newper100k, '<br>', "Cases: ", cases, '<br>', "Deaths: ", deaths))
+
+# Set Up Mapping Details
+set_map_details <- list(
+  scope = 'usa',
+  projection = list(type = 'albers usa'),
+  showlakes = TRUE,
+  lakecolor = toRGB('white'))
+
+# Create Map
+fig <- plot_geo(cov_per100, locationmode = 'USA-states') |> 
+  add_trace(
+    z = ~newper100k, text = ~hover, locations = ~state,
+    color = ~newper100k, colors = 'Blues')
+fig <- fig |> colorbar(title = paste0("Cases per 100k: ", Sys.Date()), limits = c(0,shadeLimit))
+fig <- fig |> layout(
+    title = paste('Cases per 100k by State as of', Sys.Date(), '<br>(Hover for value)'),
+    geo = set_map_details)
+fig_Today <- fig
+
+### Plot together 
+fig_combined <- subplot(fig_pick.date, fig_Today, nrows = 2, margin = .05)
+
+fig_combined
+```
+
+There are obvious differences in CFR for the two figures. First, we can immediately see a difference in the amount of cases for the two dates based on the colors of each figure, with the 2024 map being almost completely a light shade of blue. The 2021 map, on the other hand, is much more heterogenous, with states like Alaska, Montana, and West Virginia having the most cases. 

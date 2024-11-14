@@ -6,6 +6,7 @@ editor: visual
 embed-resources: true
 theme: cosmo
 ---
+
 # Setup
 
 ```{r, results='hide'}
@@ -274,4 +275,3 @@ summary_customer_5
 # Cleanup!
 dbDisconnect(con)
 ```
-
