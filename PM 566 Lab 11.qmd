@@ -71,6 +71,7 @@ max(cov_states$cases)
 
 
 ```
+
 The range of dates for this data set is between January 21st, 2020 (01/21/2020) and March 23rd, 2023 (03/23/2023). The minimum number of cases observed is 1, whereas the maximum is 12,169,158.
 
 ## Step 4
@@ -221,7 +222,7 @@ p <- ggplot(cov_states_today_filter, aes(x=pop_density, y=newdeathsper100k, size
 ggplotly(p)
 ```
 
-There does not seem to be a particularly strong correlation between COVID-19 deaths per 100,000 and population density. Looking at this figure, we can see that for increases in population density between ~100 and ~240, there is a decline in deaths, as with population density between ~750 and ~1250. For all other regions, there does not seem to be a clear relationship between the two variables.
+There does not seem to be a particularly strong correlation between COVID-19 deaths per 100,000 and population density. Looking at this figure, we can see that for increases in population density between \~100 and \~240, there is a decline in deaths, as with population density between \~750 and \~1250. For all other regions, there does not seem to be a clear relationship between the two variables.
 
 ## Step 8
 
@@ -232,6 +233,7 @@ plot_ly(cov_states, x = ~date, y = ~naive_CFR, color = ~state, type = "scatter",
 # Linechart for Florida Showing new_cases and new_deaths Together
 cov_states |> filter(state=="Florida") |> plot_ly(x = ~date, y = ~new_cases, type = "scatter", mode = "lines", name = "New Cases") |> add_trace(x = ~date, y = ~new_deaths, type = "scatter", mode = "lines", name = "New Deaths") 
 ```
+
 Naive CFR for the majority of states steadily increased from July 2021 to January 2022, where they saw the largest decrease until approximately February of the same year. After this point, most states saw a slight increase in naive CFR followed by a steady plateau. The states that did not follow this broad trend were Alaska and Utah, in which there was larger increase prior to the January-Februaru 2022 drop.
 
 The peak in new cases was January 10, 2022 with 84.669k new cases. The peak for new deaths was September 20, 2021 with 445 new deaths. The time between these two dates is approximately 112 days.
@@ -357,4 +359,4 @@ fig_combined <- subplot(fig_pick.date, fig_Today, nrows = 2, margin = .05)
 fig_combined
 ```
 
-There are obvious differences in CFR for the two figures. First, we can immediately see a difference in the amount of cases for the two dates based on the colors of each figure, with the 2024 map being almost completely a light shade of blue. The 2021 map, on the other hand, is much more heterogenous, with states like Alaska, Montana, and West Virginia having the most cases. 
+There are obvious differences in CFR for the two figures. First, we can immediately see a difference in the amount of cases for the two dates based on the colors of each figure, with the 2024 map being almost completely a light shade of blue. The 2021 map, on the other hand, is much more heterogenous, with states like Alaska, Montana, and West Virginia having the most cases.

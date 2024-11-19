@@ -1,0 +1,179 @@
+---
+title: "PM 566 Assignment 4"
+author: "Dana Gonzalez"
+format: html
+editor: visual
+embed-resources: true
+theme: cosmo
+---
+
+# Load Libraries
+
+```{r, message=FALSE, results='hide'}
+library(dplyr)
+library(tidyverse)
+library(microbenchmark)
+library(parallel)
+library(RSQLite)
+library(DBI)
+library(DT)
+```
+
+# HPC
+
+### Make Things Run Faster
+
+```{r}
+# Total Row Sums
+fun1 <- function(mat) {
+  n <- nrow(mat)
+  ans <- double(n) 
+  for (i in 1:n) {
+    ans[i] <- sum(mat[i, ])}
+  ans}
+
+fun1alt <- function(mat) {
+  apply(mat, 1, sum)}
+
+# Cumulative Sum by Row
+fun2 <- function(mat) {
+  n <- nrow(mat)
+  k <- ncol(mat)
+  ans <- mat
+  for (i in 1:n) {
+    for (j in 2:k) {
+      ans[i,j] <- mat[i, j] + ans[i, j - 1]}}
+  ans}
+
+fun2alt <- function(mat) {
+  t(apply(mat, 1, cumsum))}
+```
+
+### Question 1
+
+```{r, warning=FALSE}
+# Use Data with Code
+set.seed(2315)
+dat <- matrix(rnorm(200 * 100), nrow = 200)
+
+# Test for First
+microbenchmark::microbenchmark(
+  fun1(dat),
+  fun1alt(dat), unit = "relative")
+
+# Test for Second
+microbenchmark::microbenchmark(
+  fun2(dat),
+  fun2alt(dat), unit = "relative")
+
+# Make Things Run Faster with Parallel Computing
+sim_pi <- function(n = 1000, i = NULL) {
+  p <- matrix(runif(n*2), ncol = 2)
+  mean(rowSums(p^2) < 1) * 4}
+
+# Run Simulation Multiple Times
+set.seed(1231)
+system.time({
+  ans <- unlist(lapply(1:4000, sim_pi, n = 10000))
+  print(mean(ans))})
+```
+
+### Question 2
+
+```{r}
+# Parallelize Previous Code
+sim_pi <- function(i, n) {
+  x <- runif(n)
+  y <- runif(n)
+  pi_estimate <- mean((x^2 + y^2) <= 1) * 4
+  return(pi_estimate)}
+set.seed(1231)
+
+# Show Runtime
+system.time({
+  ans <- unlist(mclapply(1:4000, sim_pi, n = 10000, mc.cores = 4))
+  print(mean(ans))})
+```
+
+# SQL
+
+### Setup Temporary Database
+
+```{r}
+# Initialize Database
+con <- dbConnect(SQLite(), ":memory:")
+
+# Download Tables
+film <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/film.csv")
+film_category <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/film_category.csv")
+category <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/category.csv")
+
+# Copy Tables to Database
+dbWriteTable(con, "film", film)
+dbWriteTable(con, "film_category", film_category)
+dbWriteTable(con, "category", category)
+```
+
+### Question 3
+
+```{r}
+# How Many Movies in Each Rating Category
+query1 <-
+"SELECT rating, COUNT(*) AS count
+FROM film
+GROUP BY rating
+ORDER BY count DESC"
+
+rating_counts <- dbGetQuery(con, query1)
+
+rating_counts
+```
+
+### Question 4
+
+```{r}
+# Average Replacement Cost and Rental Rate for Each Rating Category
+query2 <-
+"SELECT rating, 
+    AVG(replacement_cost) AS average_replacement, 
+    AVG(rental_rate) AS average_rental
+FROM film
+GROUP BY rating
+ORDER BY rating"
+  
+rating_averages <- dbGetQuery(con, query2)
+
+rating_averages
+```
+
+### Question 5
+
+```{r}
+# Find How Many Movies Within Each Category ID
+query3 <- 
+"SELECT rating, COUNT(*) AS count
+FROM film
+  INNER JOIN film_category ON film.film_id = film_category.film_id
+GROUP BY rating
+ORDER BY count DESC"
+
+category_counts <- dbGetQuery(con, query3)
+
+category_counts
+```
+
+### Question 6
+
+```{r}
+# Find Name of the Most Popular Category
+query4 <-
+"SELECT name, COUNT(*) AS count
+FROM category
+  INNER JOIN film_category ON category.category_id = film_category.category_id
+GROUP BY name
+ORDER BY count DESC"
+
+category_popularity <- dbGetQuery(con,query4)
+
+category_popularity
+```

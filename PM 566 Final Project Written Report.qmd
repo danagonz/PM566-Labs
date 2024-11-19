@@ -1,0 +1,70 @@
+---
+title: "The Evolving Landscape of Acute Hepatitis C in the United States: A Demographic Breakdown"
+author: "Dana Gonzalez"
+format: html
+editor: visual
+embed-resources: true
+theme: flatly
+---
+
+### Introduction
+
+Hepatitis C virus (HCV) infection is the most common blood-borne infection in the United States. National surveillance data has shown a significant rise in acute HCV cases (those in the first 6 months of infection) in the last decade, with case counts having nearly doubled. While the "baby boomer" generation (those born between 1946 and 1964) has been identified as a key population due to their likelihood of receiving a blood transfusion before universal screening guidelines, an increasing number of new cases have been reported in younger individuals. Due to the asymptomatic nature of acute HCV, the true burden of this disease is likely grossly underestimated. For this reason, it is critical that current at-risk populations are promptly identified to better target appropriate public health interventions.
+
+**For this reason, in this assignment I will work to visualize trends in acute HCV incidence across the following demographic groups for the period 2000-2022:**
+
+-   Racial/Ethnic Groups:
+    -   American Indian/Alaska Native
+    -   Asian/Pacific Islander
+    -   Black/African American
+    -   Hispanic/Latino
+    -   White
+    -   Other
+    -   Unknown
+-   Age Groups:
+    -   0-19 years
+    -   20-29 years
+    -   30-39 years
+    -   40-49 years
+    -   50-59 years
+    -   ≥60 years
+-   Sex:
+    -   Male
+    -   Female
+
+**Further, I will also visualize trends in incidence rates across the following for the same period:**
+
+-   Geographic Location:
+    -   50 U.S. States
+    -   District of Columbia
+-   Department of Health and Human Services (HHS) Region:
+    -   Region 1: Boston
+    -   Region 2: New York
+    -   Region 3: Philadelphia
+    -   Region 4: Atlanta
+    -   Region 5: Chicago
+    -   Region 6: Dallas
+    -   Region 7: Kansas City
+    -   Region 8: Denver
+    -   Region 9: San Francisco
+    -   Region 10: Seattle
+-   Urbanicity:
+    -   Urban
+    -   Rural
+
+This dataset includes the following five variables:
+
+-   "Indicator" ("Acute Viral Hepatitis C" for all observations)
+-   "Year" (2000-2022)
+-   "Race.Ethnicity"
+    -   "American Indian/Alaska Native"
+    -   "Asian/Pacific Islander"
+    -   "Black/African American"
+    -   "Hispanic/Latino"
+    -   "White"
+    -   "Other"
+    -   "Unknown"
+-   "Cases" (crude case counts)
+-   "Rate.per.100.000" (incidence rate)
+
+Introduction: provide background on your dataset and formulated question) Methods: include how and where the data were acquired, how you cleaned and wrangled the data, what tools you used for data exploration Results: provide final, publication-ready tables and figures from your analysis, make separate subsections as needed Conclusion and Summary: a brief recap where you describe your findings.
